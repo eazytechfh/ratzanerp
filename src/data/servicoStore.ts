@@ -18,6 +18,8 @@ interface ServicoRow {
   forma_pagamento: string
   parcelas: number | null
   contabilizar_receita: boolean
+  garantia_ate: string | null
+  hora_inicio_real: string | null
   baixa: Servico['baixa'] | null
 }
 
@@ -39,6 +41,8 @@ function fromRow(r: ServicoRow): Servico {
     formaPagamento: r.forma_pagamento as Servico['formaPagamento'],
     parcelas: r.parcelas ?? undefined,
     contabilizarReceita: r.contabilizar_receita,
+    garantiaAte: r.garantia_ate ?? undefined,
+    horaInicioReal: r.hora_inicio_real ?? undefined,
     baixa: r.baixa ?? undefined,
   }
 }
@@ -61,6 +65,8 @@ function toRow(s: Servico): ServicoRow {
     forma_pagamento: s.formaPagamento,
     parcelas: s.parcelas ?? null,
     contabilizar_receita: s.contabilizarReceita,
+    garantia_ate: s.garantiaAte ?? null,
+    hora_inicio_real: s.horaInicioReal ?? null,
     baixa: s.baixa ?? null,
   }
 }
@@ -88,5 +94,10 @@ export async function addServico(servico: Servico) {
 
 export async function updateServico(id: string, changes: Partial<Servico>) {
   const { error } = await store.update(id, changes)
+  if (error) console.error(error)
+}
+
+export async function removeServico(id: string) {
+  const { error } = await store.remove(id)
   if (error) console.error(error)
 }

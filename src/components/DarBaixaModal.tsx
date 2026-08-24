@@ -20,7 +20,7 @@ function fmtDate(d: Date) {
 export default function DarBaixaModal({ servico, onClose }: Props) {
   const { userEmail } = useAuth()
   const [dataServico, setDataServico] = useState(fmtDate(new Date()))
-  const [garantiaAte, setGarantiaAte] = useState('')
+  const [garantiaAte, setGarantiaAte] = useState(servico.garantiaAte ?? '')
   const [horaInicio, setHoraInicio] = useState(servico.horaAgendada)
   const [horaFim, setHoraFim] = useState('')
   const [pragas, setPragas] = useState<string[]>(servico.pragas ?? [])

@@ -16,6 +16,7 @@ const FORMA_LABEL: Record<Servico['formaPagamento'], string> = {
   boleto_pj: 'Boleto PJ',
   garantia: 'Garantia',
   dinheiro: 'Dinheiro',
+  incluso_no_contrato: 'Incluso no Contrato',
 }
 
 function fmtDataLonga(dataStr: string) {

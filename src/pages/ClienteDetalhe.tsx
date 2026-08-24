@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2,
+  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2,
 } from 'lucide-react'
-import { useClientes } from '../data/clienteStore'
+import { useClientes, removeCliente } from '../data/clienteStore'
+import { useAuth } from '../context/AuthContext'
+import { registrarLog } from '../data/logStore'
 import { getCategoriaById } from '../data/categoriaStore'
 import { useServicos } from '../data/servicoStore'
 import { useContratos } from '../data/contratoStore'
@@ -19,6 +21,7 @@ import type { Contrato } from '../types'
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { userEmail, perfil } = useAuth()
   const clientes = useClientes()
   const servicos = useServicos()
   const contratos = useContratos()
@@ -64,6 +67,16 @@ export default function ClienteDetalhe() {
     .filter((s) => s.status === 'concluido')
     .reduce((acc, s) => acc + s.valor, 0)
 
+  const podeExcluir = perfil?.role === 'administrador' || perfil?.role === 'gerente_geral'
+
+  function handleExcluirCliente() {
+    if (!cliente) return
+    if (!window.confirm(`Excluir permanentemente o cliente ${cliente.nome}? Esta ação não pode ser desfeita.`)) return
+    removeCliente(cliente.id)
+    registrarLog(userEmail ?? 'sistema', 'Cliente excluído', cliente.nome)
+    navigate('/clientes')
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -103,6 +116,15 @@ export default function ClienteDetalhe() {
             <Pencil size={16} />
             Editar cliente
           </button>
+          {podeExcluir && (
+            <button
+              onClick={handleExcluirCliente}
+              className="inline-flex items-center gap-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+            >
+              <Trash2 size={16} />
+              Excluir cliente
+            </button>
+          )}
         </div>
       </div>
 

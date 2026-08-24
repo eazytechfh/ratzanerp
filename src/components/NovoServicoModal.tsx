@@ -23,6 +23,7 @@ const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string }[] = [
   { value: 'boleto_pj', label: 'Boleto PJ' },
   { value: 'garantia', label: 'Garantia' },
   { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'incluso_no_contrato', label: 'Incluso no Contrato' },
 ]
 
 export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
@@ -40,7 +41,22 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   const [parcelas, setParcelas] = useState(1)
   const [pragas, setPragas] = useState<string[]>([])
   const [observacoes, setObservacoes] = useState('')
+  const [garantiaAte, setGarantiaAte] = useState('')
+  const [multiplasDatas, setMultiplasDatas] = useState(false)
+  const [datasExtras, setDatasExtras] = useState<{ data: string; hora: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  function addDataExtra() {
+    setDatasExtras((prev) => [...prev, { data: '', hora: '09:00' }])
+  }
+
+  function updateDataExtra(idx: number, field: 'data' | 'hora', value: string) {
+    setDatasExtras((prev) => prev.map((d, i) => (i === idx ? { ...d, [field]: value } : d)))
+  }
+
+  function removeDataExtra(idx: number) {
+    setDatasExtras((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   function togglePraga(p: string) {
     setPragas((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]))
@@ -60,31 +76,47 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     if (!validate()) return
     const cliente = clientes.find((c) => c.id === clienteId)!
 
-    const novo: Servico = {
-      id: `serv-${Date.now()}`,
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      tipoServico,
-      operador,
-      dataAgendada,
-      horaAgendada,
-      status: 'agendado',
-      endereco: cliente.enderecos[0]?.endereco ?? '',
-      observacoes,
-      valor: Number(valor),
-      tipoAtendimento: formaPagamento === 'garantia' ? 'reforco' : 'novo',
-      pragas,
-      formaPagamento,
-      parcelas: formaPagamento === 'credito' || formaPagamento === 'boleto_pj' ? parcelas : undefined,
-      contabilizarReceita: formaPagamento !== 'garantia',
+    const datasParaCriar = [
+      { data: dataAgendada, hora: horaAgendada },
+      ...(multiplasDatas ? datasExtras.filter((d) => d.data) : []),
+    ]
+
+    let algumFalhou = false
+    for (let i = 0; i < datasParaCriar.length; i++) {
+      const { data, hora } = datasParaCriar[i]
+      const ehPrimeiro = i === 0
+      const novo: Servico = {
+        id: `serv-${Date.now()}-${i}`,
+        clienteId: cliente.id,
+        clienteNome: cliente.nome,
+        tipoServico,
+        operador,
+        dataAgendada: data,
+        horaAgendada: hora,
+        status: 'agendado',
+        endereco: cliente.enderecos[0]?.endereco ?? '',
+        observacoes,
+        valor: ehPrimeiro ? Number(valor) : 0,
+        tipoAtendimento: ehPrimeiro && formaPagamento === 'garantia' ? 'reforco' : 'novo',
+        pragas,
+        formaPagamento: ehPrimeiro ? formaPagamento : 'incluso_no_contrato',
+        parcelas: ehPrimeiro && (formaPagamento === 'credito' || formaPagamento === 'boleto_pj') ? parcelas : undefined,
+        contabilizarReceita: ehPrimeiro && formaPagamento !== 'garantia' && formaPagamento !== 'incluso_no_contrato',
+        garantiaAte: garantiaAte || undefined,
+      }
+
+      const created = await addServico(novo)
+      if (!created) {
+        algumFalhou = true
+        continue
+      }
+      registrarLog(userEmail ?? 'sistema', 'Serviço agendado', `${created.tipoServico} — ${created.clienteNome}`)
     }
 
-    const created = await addServico(novo)
-    if (!created) {
-      setErrors({ valor: 'Não foi possível salvar o serviço. Tente novamente.' })
+    if (algumFalhou) {
+      setErrors({ valor: 'Não foi possível salvar um ou mais serviços. Tente novamente.' })
       return
     }
-    registrarLog(userEmail ?? 'sistema', 'Serviço agendado', `${created.tipoServico} — ${created.clienteNome}`)
     onClose()
   }
 
@@ -173,6 +205,58 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
           </div>
 
           <div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={multiplasDatas}
+                onChange={(e) => {
+                  setMultiplasDatas(e.target.checked)
+                  if (e.target.checked && datasExtras.length === 0) addDataExtra()
+                }}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+              />
+              Agendar mais de um serviço (outras datas)
+            </label>
+            {multiplasDatas && (
+              <div className="mt-3 space-y-2">
+                {datasExtras.map((d, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={d.data}
+                      onChange={(e) => updateDataExtra(idx, 'data', e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                    <input
+                      type="time"
+                      value={d.hora}
+                      onChange={(e) => updateDataExtra(idx, 'hora', e.target.value)}
+                      className="w-28 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeDataExtra(idx)}
+                      className="text-slate-400 hover:text-rose-600 p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDataExtra}
+                  className="text-xs font-semibold text-brand-600 hover:text-brand-700"
+                >
+                  + Adicionar outra data
+                </button>
+                <p className="text-xs text-slate-500">
+                  A forma de pagamento e o valor informados são aplicados apenas ao primeiro serviço.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor (R$)</label>
             <input
               type="number"
@@ -226,6 +310,16 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
                 </select>
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Garantia até</label>
+            <input
+              type="date"
+              value={garantiaAte}
+              onChange={(e) => setGarantiaAte(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+            />
           </div>
 
           <div>

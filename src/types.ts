@@ -54,6 +54,7 @@ export type FormaPagamento =
   | 'boleto_pj'
   | 'garantia'
   | 'dinheiro'
+  | 'incluso_no_contrato'
 
 export interface TipoServicoItem {
   id: string
@@ -111,6 +112,8 @@ export interface Servico {
   formaPagamento: FormaPagamento
   parcelas?: number
   contabilizarReceita: boolean
+  garantiaAte?: string
+  horaInicioReal?: string
   baixa?: BaixaServico
 }
 

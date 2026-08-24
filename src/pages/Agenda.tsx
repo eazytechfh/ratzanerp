@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw } from 'lucide-react'
-import { useServicos, updateServico } from '../data/servicoStore'
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2 } from 'lucide-react'
+import { useServicos, updateServico, removeServico } from '../data/servicoStore'
 import { useOperadores } from '../data/operadorStore'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
@@ -79,10 +79,33 @@ export default function Agenda() {
     registrarLog(userEmail ?? 'sistema', 'Serviço cancelado', `${s.tipoServico} — ${s.clienteNome}`)
   }
 
+  function handleIniciar(s: Servico) {
+    const agora = new Date()
+    const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`
+    updateServico(s.id, { status: 'em_andamento', horaInicioReal: horaAtual })
+    registrarLog(userEmail ?? 'sistema', 'Serviço iniciado', `${s.tipoServico} — ${s.clienteNome} às ${horaAtual}`)
+  }
+
+  function handleExcluir(s: Servico) {
+    if (!window.confirm(`Excluir permanentemente o serviço de ${s.clienteNome}?`)) return
+    removeServico(s.id)
+    registrarLog(userEmail ?? 'sistema', 'Serviço excluído', `${s.tipoServico} — ${s.clienteNome}`)
+  }
+
+  const podeExcluir = perfil?.role !== 'operador'
+
   function renderAcoes(s: Servico) {
     if (s.status !== 'agendado' && s.status !== 'em_andamento') return null
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
+        {s.status === 'agendado' && (
+          <button
+            onClick={() => handleIniciar(s)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+          >
+            <PlayCircle size={13} /> Iniciar serviço
+          </button>
+        )}
         <button
           onClick={() => { setSelecionado(s); setModalBaixa(true) }}
           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
@@ -101,6 +124,14 @@ export default function Agenda() {
         >
           <XCircle size={13} /> Cancelar
         </button>
+        {podeExcluir && (
+          <button
+            onClick={() => handleExcluir(s)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
+          >
+            <Trash2 size={13} /> Excluir
+          </button>
+        )}
       </div>
     )
   }

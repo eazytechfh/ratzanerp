@@ -96,3 +96,8 @@ export async function updateCliente(id: string, changes: Partial<Cliente>) {
   const { error } = await store.update(id, changes)
   if (error) console.error(error)
 }
+
+export async function removeCliente(id: string) {
+  const { error } = await store.remove(id)
+  if (error) console.error(error)
+}
