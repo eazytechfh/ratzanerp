@@ -65,6 +65,28 @@ export function useContasReceber(): ContaReceberItem[] {
 
   servicos.forEach((s) => {
     if (!s.contabilizarReceita) return
+
+    if (s.parcelasDetalhe && s.parcelasDetalhe.length > 0) {
+      const total = s.parcelasDetalhe.length
+      s.parcelasDetalhe.forEach((p, idx) => {
+        const id = `sv-${s.id}-p${idx + 1}`
+        itens.push({
+          id,
+          clienteId: s.clienteId,
+          clienteNome: s.clienteNome,
+          descricao: `${s.tipoServico} (parcela ${idx + 1}/${total})`,
+          valor: p.valor,
+          vencimento: p.vencimento,
+          status: overridesAtuais.has(id) ? 'pago' : 'pendente',
+          origem: 'servico',
+          formaPagamento: s.formaPagamento,
+          parcela: idx + 1,
+          totalParcelas: total,
+        })
+      })
+      return
+    }
+
     const id = `sv-${s.id}`
     itens.push({
       id,
@@ -75,6 +97,7 @@ export function useContasReceber(): ContaReceberItem[] {
       vencimento: s.dataAgendada,
       status: overridesAtuais.has(id) || s.status === 'concluido' ? 'pago' : 'pendente',
       origem: 'servico',
+      formaPagamento: s.formaPagamento,
     })
   })
 

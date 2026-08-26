@@ -117,21 +117,27 @@ export default function ContasReceberTab() {
                   <td className="px-4 py-3 text-right text-slate-700">{c.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => handleEmitir('boleto', c)}
-                        disabled={carregandoBoleto}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-50"
-                      >
-                        {carregandoBoleto ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
-                        {boleto?.url ? 'Reemitir boleto' : 'Emitir boleto'}
-                      </button>
-                      {boleto?.url && (
-                        <a href={boleto.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-ink-900">
-                          <ExternalLink size={11} /> Ver boleto
-                        </a>
-                      )}
-                      {erroBoleto && (
-                        <span className="inline-flex items-center gap-1 text-xs text-rose-600 max-w-[180px] text-right"><AlertCircle size={11} className="shrink-0" /> {erroBoleto}</span>
+                      {c.formaPagamento === 'credito' ? (
+                        <span className="text-xs text-slate-400">Pago no cartão de crédito — sem emissão de boleto</span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleEmitir('boleto', c)}
+                            disabled={carregandoBoleto}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-50"
+                          >
+                            {carregandoBoleto ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
+                            {boleto?.url ? 'Reemitir boleto' : 'Emitir boleto'}
+                          </button>
+                          {boleto?.url && (
+                            <a href={boleto.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-ink-900">
+                              <ExternalLink size={11} /> Ver boleto
+                            </a>
+                          )}
+                          {erroBoleto && (
+                            <span className="inline-flex items-center gap-1 text-xs text-rose-600 max-w-[180px] text-right"><AlertCircle size={11} className="shrink-0" /> {erroBoleto}</span>
+                          )}
+                        </>
                       )}
 
                       <button

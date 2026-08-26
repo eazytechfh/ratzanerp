@@ -8,6 +8,7 @@ import { useClientes } from '../../data/clienteStore'
 import { useMetas, getMeta } from '../../data/metaStore'
 import { useContasReceber } from '../../data/receivableStore'
 import { useContasPagar } from '../../data/contaPagarStore'
+import { useAuth } from '../../context/AuthContext'
 import KpiCard from '../KpiCard'
 
 const MONTH_LABELS = [
@@ -18,6 +19,8 @@ const MONTH_LABELS = [
 const BAR_COLORS = ['#ab171a', '#c8323f', '#cc3366', '#e8578a', '#df6870', '#ec9a9d']
 
 export default function FinanceiroDashboard() {
+  const { perfil } = useAuth()
+  const podeVerFluxoCaixa = perfil?.role === 'administrador'
   const servicos = useServicos()
   const clientes = useClientes()
   const contasReceber = useContasReceber()
@@ -128,6 +131,7 @@ export default function FinanceiroDashboard() {
         <KpiCard label="Atingimento da meta" value={`${atingimento}%`} icon={Percent} tone={atingimento >= 100 ? 'green' : 'amber'} />
       </div>
 
+      {podeVerFluxoCaixa && (
       <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
         <h2 className="font-semibold text-ink-900 mb-4">Fluxo de caixa</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -169,6 +173,7 @@ export default function FinanceiroDashboard() {
           </div>
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">

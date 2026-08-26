@@ -20,6 +20,8 @@ interface ServicoRow {
   contabilizar_receita: boolean
   garantia_ate: string | null
   hora_inicio_real: string | null
+  maquininha: string | null
+  parcelas_detalhe: Servico['parcelasDetalhe'] | null
   baixa: Servico['baixa'] | null
 }
 
@@ -43,6 +45,8 @@ function fromRow(r: ServicoRow): Servico {
     contabilizarReceita: r.contabilizar_receita,
     garantiaAte: r.garantia_ate ?? undefined,
     horaInicioReal: r.hora_inicio_real ?? undefined,
+    maquininha: (r.maquininha as Servico['maquininha']) ?? undefined,
+    parcelasDetalhe: r.parcelas_detalhe ?? undefined,
     baixa: r.baixa ?? undefined,
   }
 }
@@ -67,6 +71,8 @@ function toRow(s: Servico): ServicoRow {
     contabilizar_receita: s.contabilizarReceita,
     garantia_ate: s.garantiaAte ?? null,
     hora_inicio_real: s.horaInicioReal ?? null,
+    maquininha: s.maquininha ?? null,
+    parcelas_detalhe: s.parcelasDetalhe ?? null,
     baixa: s.baixa ?? null,
   }
 }

@@ -6,6 +6,8 @@ import { updateServico } from '../data/servicoStore'
 import { dispararWebhookConclusao } from '../data/webhooks'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
+import { addContaPagar } from '../data/contaPagarStore'
+import { TAXAS_MAQUININHA, MAQUININHAS } from '../types'
 import SignaturePad from './SignaturePad'
 
 interface Props {
@@ -85,6 +87,27 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
     updateServico(servico.id, atualizado)
     dispararWebhookConclusao(atualizado)
     registrarLog(userEmail ?? 'sistema', 'Baixa dada em serviço', `${servico.tipoServico} — ${servico.clienteNome}`)
+
+    if (
+      (servico.formaPagamento === 'credito' || servico.formaPagamento === 'debito') &&
+      servico.maquininha &&
+      servico.valor > 0
+    ) {
+      const taxas = TAXAS_MAQUININHA[servico.maquininha]
+      const percentual = servico.formaPagamento === 'debito' ? taxas.debito : taxas.credito(servico.parcelas ?? 1)
+      const taxaValor = Math.round(servico.valor * percentual * 100) / 100
+      const maquininhaLabel = MAQUININHAS.find((m) => m.value === servico.maquininha)?.label ?? servico.maquininha
+      addContaPagar({
+        id: `cp-taxa-${servico.id}`,
+        descricao: `Taxa maquininha ${maquininhaLabel} — ${servico.clienteNome}`,
+        categoria: 'Taxas de Cartão',
+        valor: taxaValor,
+        vencimento: dataServico,
+        status: 'pendente',
+      })
+      registrarLog(userEmail ?? 'sistema', 'Taxa de cartão lançada', `${maquininhaLabel} — ${servico.clienteNome} — ${taxaValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`)
+    }
+
     onClose()
   }
 

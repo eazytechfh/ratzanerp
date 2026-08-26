@@ -40,6 +40,7 @@ export interface Cliente {
   precisaEpi: boolean
   origem: OrigemServico
   observacoes?: string
+  contatoResponsavel?: string
 }
 
 export type StatusServico = 'agendado' | 'em_andamento' | 'concluido' | 'cancelado'
@@ -73,6 +74,30 @@ export const PRAGAS = [
   'Aranhas',
   'Carrapatos/Pulgas',
 ] as const
+
+export type Maquininha = 'infinity' | 'itau'
+
+export const MAQUININHAS: { value: Maquininha; label: string }[] = [
+  { value: 'infinity', label: 'Infinity' },
+  { value: 'itau', label: 'Itaú' },
+]
+
+// Taxas fictícias — ajustar quando os dados reais das maquininhas forem informados.
+export const TAXAS_MAQUININHA: Record<Maquininha, { debito: number; credito: (parcelas: number) => number }> = {
+  infinity: {
+    debito: 0.0159,
+    credito: (parcelas) => 0.0299 + (Math.max(parcelas, 1) - 1) * 0.0119,
+  },
+  itau: {
+    debito: 0.0179,
+    credito: (parcelas) => 0.0349 + (Math.max(parcelas, 1) - 1) * 0.0129,
+  },
+}
+
+export interface ParcelaServico {
+  valor: number
+  vencimento: string
+}
 
 export type TipoAplicacao = 'aplicacao' | 'reforco'
 
@@ -114,6 +139,8 @@ export interface Servico {
   contabilizarReceita: boolean
   garantiaAte?: string
   horaInicioReal?: string
+  maquininha?: Maquininha
+  parcelasDetalhe?: ParcelaServico[]
   baixa?: BaixaServico
 }
 
@@ -152,6 +179,9 @@ export interface ContaReceberItem {
   vencimento: string
   status: StatusConta
   origem: 'servico' | 'recorrente'
+  formaPagamento?: FormaPagamento
+  parcela?: number
+  totalParcelas?: number
 }
 
 export const PERIODICIDADES = ['Mensal', 'Bimestral', 'Trimestral', 'Semestral', 'Anual', 'Avulso'] as const

@@ -25,6 +25,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
   const [nome, setNome] = useState(cliente.nome)
   const [telefone, setTelefone] = useState(cliente.telefone)
   const [bairro, setBairro] = useState(cliente.bairro)
+  const [contatoResponsavel, setContatoResponsavel] = useState(cliente.contatoResponsavel ?? '')
   const [categoriaId, setCategoriaId] = useState(cliente.categoriaId ?? '')
   const [status, setStatus] = useState<StatusCliente>(cliente.status)
   const [contratoInicio, setContratoInicio] = useState(cliente.contratoInicio)
@@ -52,6 +53,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
       nome: nome.trim(),
       telefone: telefone.trim(),
       bairro: bairro.trim(),
+      contatoResponsavel: cliente.tipo === 'PJ' ? contatoResponsavel.trim() || undefined : undefined,
       categoriaId: categoriaId || undefined,
       status,
       contratoInicio,
@@ -132,6 +134,18 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
               {errors.contratoFim && <p className="text-xs text-rose-600 mt-1">{errors.contratoFim}</p>}
             </div>
           </div>
+
+          {cliente.tipo === 'PJ' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Contato do responsável</label>
+              <input
+                value={contatoResponsavel}
+                onChange={(e) => setContatoResponsavel(e.target.value)}
+                placeholder="Nome e telefone/e-mail do responsável"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

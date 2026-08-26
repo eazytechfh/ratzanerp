@@ -27,6 +27,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
   const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
   const [bairro, setBairro] = useState('')
+  const [contatoResponsavel, setContatoResponsavel] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
   const [enderecos, setEnderecos] = useState<Endereco[]>([
     { id: 'end-novo-1', rotulo: 'Principal', endereco: '', cidade: 'Rio de Janeiro', uf: 'RJ', cep: '' },
@@ -68,6 +69,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
       email: email.trim(),
       telefone: telefone.trim(),
       bairro: bairro.trim(),
+      contatoResponsavel: tipo === 'PJ' ? contatoResponsavel.trim() || undefined : undefined,
       categoriaId: categoriaId || undefined,
       enderecos,
       status,
@@ -180,6 +182,18 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
               {errors.telefone && <p className="text-xs text-rose-600 mt-1">{errors.telefone}</p>}
             </div>
           </div>
+
+          {tipo === 'PJ' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Contato do responsável</label>
+              <input
+                value={contatoResponsavel}
+                onChange={(e) => setContatoResponsavel(e.target.value)}
+                placeholder="Nome e telefone/e-mail do responsável"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

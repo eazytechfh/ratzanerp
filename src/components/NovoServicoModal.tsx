@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
-import type { FormaPagamento, Servico } from '../types'
-import { PRAGAS } from '../types'
+import type { FormaPagamento, Maquininha, ParcelaServico, Servico } from '../types'
+import { PRAGAS, MAQUININHAS } from '../types'
 import { useClientes } from '../data/clienteStore'
 import { addServico } from '../data/servicoStore'
 import { useOperadores } from '../data/operadorStore'
@@ -39,6 +39,8 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   const [valor, setValor] = useState('')
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('pix')
   const [parcelas, setParcelas] = useState(1)
+  const [maquininha, setMaquininha] = useState<Maquininha>('infinity')
+  const [parcelasExtras, setParcelasExtras] = useState<{ valor: string; vencimento: string }[]>([])
   const [pragas, setPragas] = useState<string[]>([])
   const [observacoes, setObservacoes] = useState('')
   const [garantiaAte, setGarantiaAte] = useState('')
@@ -62,6 +64,20 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     setPragas((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]))
   }
 
+  function handleParcelasChange(n: number) {
+    setParcelas(n)
+    setParcelasExtras((prev) => {
+      const qtd = n - 1
+      const next = prev.slice(0, qtd)
+      while (next.length < qtd) next.push({ valor: '', vencimento: '' })
+      return next
+    })
+  }
+
+  function updateParcelaExtra(idx: number, field: 'valor' | 'vencimento', value: string) {
+    setParcelasExtras((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)))
+  }
+
   const valorDispensado = formaPagamento === 'garantia' || formaPagamento === 'incluso_no_contrato'
 
   function validate() {
@@ -69,6 +85,10 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     if (!clienteId) errs.clienteId = 'Selecione um cliente'
     if (!dataAgendada) errs.dataAgendada = 'Informe a data'
     if (!valorDispensado && (!valor || Number(valor) <= 0)) errs.valor = 'Informe um valor válido'
+    if (formaPagamento === 'boleto_pj' && parcelas > 1) {
+      const incompleta = parcelasExtras.some((p) => !p.valor || Number(p.valor) <= 0 || !p.vencimento)
+      if (incompleta) errs.parcelas = 'Preencha valor e data de pagamento de todas as parcelas'
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -82,6 +102,14 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
       { data: dataAgendada, hora: horaAgendada },
       ...(multiplasDatas ? datasExtras.filter((d) => d.data) : []),
     ]
+
+    const parcelasDetalhe: ParcelaServico[] | undefined =
+      formaPagamento === 'boleto_pj' && parcelas > 1
+        ? [
+            { valor: Number(valor), vencimento: dataAgendada },
+            ...parcelasExtras.map((p) => ({ valor: Number(p.valor), vencimento: p.vencimento })),
+          ]
+        : undefined
 
     let algumFalhou = false
     for (let i = 0; i < datasParaCriar.length; i++) {
@@ -105,6 +133,8 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
         parcelas: ehPrimeiro && (formaPagamento === 'credito' || formaPagamento === 'boleto_pj') ? parcelas : undefined,
         contabilizarReceita: ehPrimeiro && formaPagamento !== 'garantia' && formaPagamento !== 'incluso_no_contrato',
         garantiaAte: garantiaAte || undefined,
+        maquininha: ehPrimeiro && (formaPagamento === 'credito' || formaPagamento === 'debito') ? maquininha : undefined,
+        parcelasDetalhe: ehPrimeiro ? parcelasDetalhe : undefined,
       }
 
       const created = await addServico(novo)
@@ -122,7 +152,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     onClose()
   }
 
-  const maxParcelas = formaPagamento === 'credito' ? 3 : formaPagamento === 'boleto_pj' ? 4 : 1
+  const maxParcelas = formaPagamento === 'credito' ? 3 : formaPagamento === 'boleto_pj' ? 12 : 1
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -283,7 +313,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
                   type="button"
                   onClick={() => {
                     setFormaPagamento(f.value)
-                    setParcelas(1)
+                    handleParcelasChange(1)
                   }}
                   className={`px-2.5 py-2 rounded-lg text-xs font-semibold border transition ${
                     formaPagamento === f.value
@@ -305,18 +335,68 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
                 Serviço incluso no contrato não é lançado no contas a receber.
               </p>
             )}
+            {(formaPagamento === 'debito' || formaPagamento === 'credito') && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Maquininha</label>
+                <div className="flex gap-2">
+                  {MAQUININHAS.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setMaquininha(m.value)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition ${
+                        maquininha === m.value
+                          ? 'bg-brand-600 border-brand-600 text-white'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {(formaPagamento === 'credito' || formaPagamento === 'boleto_pj') && (
               <div className="mt-3">
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Parcelas</label>
                 <select
                   value={parcelas}
-                  onChange={(e) => setParcelas(Number(e.target.value))}
+                  onChange={(e) => handleParcelasChange(Number(e.target.value))}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
                 >
                   {Array.from({ length: maxParcelas }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{n}x</option>
                   ))}
                 </select>
+              </div>
+            )}
+            {formaPagamento === 'boleto_pj' && parcelas > 1 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-slate-500">
+                  Parcela 1: {valor ? Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'} — na data do serviço
+                </p>
+                {parcelasExtras.map((p, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 w-16 shrink-0">Parcela {idx + 2}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Valor da parcela"
+                      value={p.valor}
+                      onChange={(e) => updateParcelaExtra(idx, 'valor', e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={p.vencimento}
+                      onChange={(e) => updateParcelaExtra(idx, 'vencimento', e.target.value)}
+                      className="w-40 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                  </div>
+                ))}
+                {errors.parcelas && <p className="text-xs text-rose-600">{errors.parcelas}</p>}
+                <p className="text-xs text-slate-500">Cada parcela vai para o contas a receber na sua respectiva data de pagamento.</p>
               </div>
             )}
           </div>

@@ -18,6 +18,8 @@ export default function ContasPagarTab() {
   const [valor, setValor] = useState('')
   const [vencimento, setVencimento] = useState('')
   const [busca, setBusca] = useState('')
+  const [recorrente, setRecorrente] = useState(false)
+  const [repeticoes, setRepeticoes] = useState(2)
 
   const ordenadas = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -32,19 +34,29 @@ export default function ContasPagarTab() {
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!descricao.trim() || !valor || !vencimento) return
-    const nova: ContaPagar = {
-      id: `cp-${Date.now()}`,
-      descricao: descricao.trim(),
-      categoria: categoria.trim() || 'Geral',
-      valor: Number(valor),
-      vencimento,
-      status: 'pendente',
+
+    const qtd = recorrente ? Math.max(2, repeticoes) : 1
+    for (let i = 0; i < qtd; i++) {
+      const dataBase = new Date(vencimento + 'T00:00:00')
+      dataBase.setMonth(dataBase.getMonth() + i)
+      const vencimentoOcorrencia = dataBase.toISOString().slice(0, 10)
+      const nova: ContaPagar = {
+        id: `cp-${Date.now()}-${i}`,
+        descricao: recorrente ? `${descricao.trim()} (${i + 1}/${qtd})` : descricao.trim(),
+        categoria: categoria.trim() || 'Geral',
+        valor: Number(valor),
+        vencimento: vencimentoOcorrencia,
+        status: 'pendente',
+      }
+      addContaPagar(nova)
     }
-    addContaPagar(nova)
+
     setDescricao('')
     setCategoria('')
     setValor('')
     setVencimento('')
+    setRecorrente(false)
+    setRepeticoes(2)
     setModalOpen(false)
   }
 
@@ -141,6 +153,29 @@ export default function ContasPagarTab() {
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Vencimento</label>
                   <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500" />
                 </div>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={recorrente}
+                    onChange={(e) => setRecorrente(e.target.checked)}
+                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+                  />
+                  Despesa recorrente
+                </label>
+                {recorrente && (
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Quantas vezes se repete (mensal)</label>
+                    <input
+                      type="number"
+                      min="2"
+                      value={repeticoes}
+                      onChange={(e) => setRepeticoes(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>

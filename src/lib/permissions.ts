@@ -22,9 +22,9 @@ export function canAccessRoute(role: UserRole, pathname: string): boolean {
   return permitido.includes(role)
 }
 
-// Dentro do Financeiro, Integrações e Previsibilidade só para administrador
+// Dentro do Financeiro, Integrações, Previsibilidade e Fluxo de Caixa só para administrador
 // (gerente_geral vê o resto do módulo financeiro).
 export function podeVerAbaFinanceiro(role: UserRole, aba: string): boolean {
-  if (aba === 'integracoes' || aba === 'previsibilidade') return role === 'administrador'
+  if (aba === 'integracoes' || aba === 'previsibilidade' || aba === 'fluxo') return role === 'administrador'
   return true
 }
