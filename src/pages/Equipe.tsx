@@ -2,12 +2,14 @@ import React, { useMemo, useState } from 'react'
 import { Plus, Search, Phone, MapPin, Briefcase, Pencil, Trash2, UserRound, Users, KeyRound } from 'lucide-react'
 import { useOperadores, removeOperador } from '../data/operadorStore'
 import { useServicos } from '../data/servicoStore'
-import { useUsuarios } from '../data/perfilStore'
+import { useUsuarios, recarregarUsuarios } from '../data/perfilStore'
+import { excluirUsuario } from '../data/usuarioClient'
 import { useAuth } from '../context/AuthContext'
 import { USER_ROLE_LABELS } from '../types'
 import OperadorModal from '../components/OperadorModal'
 import NovoUsuarioModal from '../components/NovoUsuarioModal'
-import type { Operador } from '../types'
+import EditarUsuarioModal from '../components/EditarUsuarioModal'
+import type { Operador, Perfil } from '../types'
 
 type SubAba = 'operadores' | 'usuarios'
 
@@ -21,6 +23,26 @@ export default function Equipe() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editando, setEditando] = useState<Operador | null>(null)
   const [novoUsuarioOpen, setNovoUsuarioOpen] = useState(false)
+  const [editandoUsuario, setEditandoUsuario] = useState<Perfil | null>(null)
+  const [excluindoId, setExcluindoId] = useState<string | null>(null)
+
+  function podeEditarUsuario(u: Perfil) {
+    if (perfil?.role === 'administrador') return true
+    if (perfil?.role === 'gerente_geral') return u.role === 'operador'
+    return false
+  }
+
+  async function handleExcluirUsuario(u: Perfil) {
+    if (!window.confirm(`Excluir o acesso de ${u.nome} (${u.email})? Esta ação não pode ser desfeita.`)) return
+    setExcluindoId(u.id)
+    const resultado = await excluirUsuario(u.id)
+    setExcluindoId(null)
+    if (resultado.error) {
+      alert(resultado.error)
+      return
+    }
+    await recarregarUsuarios()
+  }
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -174,6 +196,7 @@ export default function Equipe() {
                 <th className="px-4 py-3 font-medium hidden sm:table-cell">E-mail</th>
                 <th className="px-4 py-3 font-medium">Papel</th>
                 <th className="px-4 py-3 font-medium hidden sm:table-cell">Vinculado a</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -189,11 +212,34 @@ export default function Equipe() {
                   <td className="px-4 py-3 hidden sm:table-cell text-slate-600">
                     {operadores.find((o) => o.id === u.operadorId)?.nome ?? '-'}
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 justify-end">
+                      {podeEditarUsuario(u) && (
+                        <button
+                          onClick={() => setEditandoUsuario(u)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink-900 hover:bg-slate-50"
+                          title="Editar usuário"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
+                      {perfil?.role === 'administrador' && (
+                        <button
+                          onClick={() => handleExcluirUsuario(u)}
+                          disabled={excluindoId === u.id}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                          title="Excluir usuário"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {usuarios.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-400">Nenhum usuário cadastrado ainda.</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-400">Nenhum usuário cadastrado ainda.</td>
                 </tr>
               )}
             </tbody>
@@ -212,6 +258,14 @@ export default function Equipe() {
       )}
       {novoUsuarioOpen && (
         <NovoUsuarioModal operadores={operadores} onClose={() => setNovoUsuarioOpen(false)} />
+      )}
+      {editandoUsuario && (
+        <EditarUsuarioModal
+          usuario={editandoUsuario}
+          operadores={operadores}
+          podeAlterarPapel={perfil?.role === 'administrador'}
+          onClose={() => setEditandoUsuario(null)}
+        />
       )}
     </div>
   )
