@@ -42,7 +42,6 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
   function validate() {
     const errs: Record<string, string> = {}
     if (!nome.trim()) errs.nome = 'Nome é obrigatório'
-    if (tipo === 'PJ' && !cnpj.trim()) errs.cnpj = 'CNPJ é obrigatório para Pessoa Jurídica'
     if (!email.trim()) errs.email = 'E-mail é obrigatório'
     if (!telefone.trim()) errs.telefone = 'Telefone é obrigatório'
     if (!contratoFim) errs.contratoFim = 'Data de fim do contrato é obrigatória'
@@ -136,7 +135,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                CNPJ {tipo === 'PJ' && <span className="text-rose-500">*</span>}
+                CNPJ <span className="text-slate-400 font-normal">(opcional)</span>
               </label>
               <input
                 value={cnpj}

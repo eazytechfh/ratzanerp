@@ -168,6 +168,7 @@ export interface ContaPagar {
   vencimento: string
   status: StatusConta
   dataPagamento?: string
+  criadoEm?: string
 }
 
 export interface ContaReceberItem {

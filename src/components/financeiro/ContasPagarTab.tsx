@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react'
-import { Plus, CheckCircle2, X, Search } from 'lucide-react'
-import { useContasPagar, addContaPagar, darBaixaContaPagar, cancelarContaPagar } from '../../data/contaPagarStore'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Plus, CheckCircle2, X, Search, Pencil } from 'lucide-react'
+import { useContasPagar, addContaPagar, darBaixaContaPagar, cancelarContaPagar, editarContaPagar } from '../../data/contaPagarStore'
 import type { ContaPagar, StatusConta } from '../../types'
+import MoneyInput from '../MoneyInput'
 
 const STATUS_LABEL: Record<StatusConta, string> = { pendente: 'Pendente', pago: 'Pago', cancelado: 'Cancelado' }
 const STATUS_STYLE: Record<StatusConta, string> = {
@@ -10,16 +11,31 @@ const STATUS_STYLE: Record<StatusConta, string> = {
   cancelado: 'bg-slate-100 text-slate-500 border-slate-200',
 }
 
+const JANELA_EDICAO_MS = 5 * 60 * 1000
+
+function dentroDaJanelaEdicao(criadoEm?: string) {
+  if (!criadoEm) return false
+  return Date.now() - new Date(criadoEm).getTime() < JANELA_EDICAO_MS
+}
+
 export default function ContasPagarTab() {
   const contas = useContasPagar()
   const [modalOpen, setModalOpen] = useState(false)
   const [descricao, setDescricao] = useState('')
   const [categoria, setCategoria] = useState('')
-  const [valor, setValor] = useState('')
+  const [valor, setValor] = useState(0)
   const [vencimento, setVencimento] = useState('')
   const [busca, setBusca] = useState('')
   const [recorrente, setRecorrente] = useState(false)
   const [repeticoes, setRepeticoes] = useState(2)
+  const [editando, setEditando] = useState<ContaPagar | null>(null)
+  const [, forceTick] = useState(0)
+
+  // re-renderiza periodicamente para a janela de edição de 5min expirar sozinha na tela
+  useEffect(() => {
+    const t = setInterval(() => forceTick((n) => n + 1), 15000)
+    return () => clearInterval(t)
+  }, [])
 
   const ordenadas = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -44,7 +60,7 @@ export default function ContasPagarTab() {
         id: `cp-${Date.now()}-${i}`,
         descricao: recorrente ? `${descricao.trim()} (${i + 1}/${qtd})` : descricao.trim(),
         categoria: categoria.trim() || 'Geral',
-        valor: Number(valor),
+        valor,
         vencimento: vencimentoOcorrencia,
         status: 'pendente',
       }
@@ -53,11 +69,28 @@ export default function ContasPagarTab() {
 
     setDescricao('')
     setCategoria('')
-    setValor('')
+    setValor(0)
     setVencimento('')
     setRecorrente(false)
     setRepeticoes(2)
     setModalOpen(false)
+  }
+
+  function handleCancelar(c: ContaPagar) {
+    if (!window.confirm(`Cancelar e excluir a conta "${c.descricao}"? Esta ação não pode ser desfeita.`)) return
+    cancelarContaPagar(c.id)
+  }
+
+  function handleSalvarEdicao(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editando) return
+    editarContaPagar(editando.id, {
+      descricao: editando.descricao,
+      categoria: editando.categoria,
+      valor: editando.valor,
+      vencimento: editando.vencimento,
+    })
+    setEditando(null)
   }
 
   return (
@@ -112,10 +145,15 @@ export default function ContasPagarTab() {
                 <td className="px-4 py-3">
                   {c.status === 'pendente' && (
                     <div className="flex items-center gap-1 justify-end">
+                      {dentroDaJanelaEdicao(c.criadoEm) && (
+                        <button onClick={() => setEditando(c)} className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100" title="Editar (até 5 minutos após criar)">
+                          <Pencil size={16} />
+                        </button>
+                      )}
                       <button onClick={() => darBaixaContaPagar(c.id)} className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50" title="Dar baixa">
                         <CheckCircle2 size={16} />
                       </button>
-                      <button onClick={() => cancelarContaPagar(c.id)} className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50" title="Cancelar">
+                      <button onClick={() => handleCancelar(c)} className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50" title="Cancelar e excluir">
                         <X size={16} />
                       </button>
                     </div>
@@ -146,8 +184,8 @@ export default function ContasPagarTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor (R$)</label>
-                  <input type="number" min="0" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor</label>
+                  <MoneyInput value={valor} onChange={setValor} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Vencimento</label>
@@ -180,6 +218,59 @@ export default function ContasPagarTab() {
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
                 <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-card">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setEditando(null)} />
+          <div className="relative bg-white rounded-2xl shadow-soft w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-ink-900">Editar conta a pagar</h2>
+              <button onClick={() => setEditando(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSalvarEdicao} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Descrição</label>
+                <input
+                  value={editando.descricao}
+                  onChange={(e) => setEditando({ ...editando, descricao: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Categoria</label>
+                <input
+                  value={editando.categoria}
+                  onChange={(e) => setEditando({ ...editando, categoria: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor</label>
+                  <MoneyInput
+                    value={editando.valor}
+                    onChange={(v) => setEditando({ ...editando, valor: v })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Vencimento</label>
+                  <input
+                    type="date"
+                    value={editando.vencimento}
+                    onChange={(e) => setEditando({ ...editando, vencimento: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setEditando(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-card">Salvar alterações</button>
               </div>
             </form>
           </div>

@@ -9,6 +9,7 @@ interface ContaPagarRow {
   vencimento: string
   status: string
   data_pagamento: string | null
+  criado_em: string | null
 }
 
 function fromRow(r: ContaPagarRow): ContaPagar {
@@ -20,6 +21,7 @@ function fromRow(r: ContaPagarRow): ContaPagar {
     vencimento: r.vencimento,
     status: r.status as ContaPagar['status'],
     dataPagamento: r.data_pagamento ?? undefined,
+    criadoEm: r.criado_em ?? undefined,
   }
 }
 
@@ -32,6 +34,7 @@ function toRow(c: ContaPagar): ContaPagarRow {
     vencimento: c.vencimento,
     status: c.status,
     data_pagamento: c.dataPagamento ?? null,
+    criado_em: c.criadoEm ?? null,
   }
 }
 
@@ -47,9 +50,14 @@ export function useContasPagar(): ContaPagar[] {
 }
 
 export async function addContaPagar(conta: ContaPagar) {
-  const { error, created } = await store.add(conta)
+  const { error, created } = await store.add({ ...conta, criadoEm: conta.criadoEm ?? new Date().toISOString() })
   if (error) console.error(error)
   return created
+}
+
+export async function editarContaPagar(id: string, changes: Partial<ContaPagar>) {
+  const { error } = await store.update(id, changes)
+  if (error) console.error(error)
 }
 
 export async function darBaixaContaPagar(id: string) {
@@ -58,6 +66,6 @@ export async function darBaixaContaPagar(id: string) {
 }
 
 export async function cancelarContaPagar(id: string) {
-  const { error } = await store.update(id, { status: 'cancelado' })
+  const { error } = await store.remove(id)
   if (error) console.error(error)
 }
