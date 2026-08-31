@@ -68,6 +68,7 @@ function proximaData(dataVencimento: string, frequencia?: Alerta['frequencia']) 
   const d = new Date(dataVencimento + 'T00:00:00')
   if (frequencia === 'diaria') d.setDate(d.getDate() + 1)
   else if (frequencia === 'semanal') d.setDate(d.getDate() + 7)
+  else if (frequencia === 'semestral') d.setMonth(d.getMonth() + 6)
   else d.setMonth(d.getMonth() + 1) // mensal (padrão)
   return d.toISOString().slice(0, 10)
 }

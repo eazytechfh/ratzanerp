@@ -4,6 +4,7 @@ import type { Cliente, Endereco, TipoPessoa, OrigemServico } from '../types'
 import { ORIGENS_SERVICO } from '../types'
 import { addCliente } from '../data/clienteStore'
 import { useCategorias } from '../data/categoriaStore'
+import { addAlerta } from '../data/alertaStore'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
 import EnderecosEditor from './EnderecosEditor'
@@ -37,6 +38,8 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
   const [precisaEpi, setPrecisaEpi] = useState(false)
   const [origem, setOrigem] = useState<OrigemServico>('Indicação')
   const [contratoFim, setContratoFim] = useState('')
+  const [reforcoSemestral, setReforcoSemestral] = useState(false)
+  const [dataReforco, setDataReforco] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   function validate() {
@@ -45,6 +48,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
     if (!email.trim()) errs.email = 'E-mail é obrigatório'
     if (!telefone.trim()) errs.telefone = 'Telefone é obrigatório'
     if (!contratoFim) errs.contratoFim = 'Data de fim do contrato é obrigatória'
+    if (reforcoSemestral && !dataReforco) errs.dataReforco = 'Informe a data do próximo reforço'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -87,6 +91,24 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
       return
     }
     registrarLog(userEmail ?? 'sistema', 'Cliente cadastrado', created.nome)
+
+    if (reforcoSemestral && dataReforco) {
+      await addAlerta({
+        id: `alerta-${Date.now()}`,
+        clienteId: created.id,
+        clienteNome: created.nome,
+        texto: 'Agendar aplicação de reforço semestral (plano anual)',
+        prioridade: 'media',
+        concluido: false,
+        criadoPor: userEmail ?? 'sistema',
+        criadoEm: new Date().toISOString(),
+        dataVencimento: dataReforco,
+        recorrente: true,
+        frequencia: 'semestral',
+      })
+      registrarLog(userEmail ?? 'sistema', 'Alerta de reforço semestral criado', created.nome)
+    }
+
     onCreated(created)
     onClose()
   }
@@ -253,6 +275,36 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
               />
               Cliente recorrente
             </label>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={reforcoSemestral}
+                onChange={(e) => {
+                  setReforcoSemestral(e.target.checked)
+                  if (!e.target.checked) setDataReforco('')
+                }}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-200"
+              />
+              Plano anual com reforço a cada 6 meses
+            </label>
+            {reforcoSemestral && (
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Data do próximo reforço</label>
+                <input
+                  type="date"
+                  value={dataReforco}
+                  onChange={(e) => setDataReforco(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                />
+                {errors.dataReforco && <p className="text-xs text-rose-600 mt-1">{errors.dataReforco}</p>}
+                <p className="text-xs text-slate-500 mt-1">
+                  Cria um alerta recorrente semestral no cadastro do cliente para não esquecer de agendar o reforço.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

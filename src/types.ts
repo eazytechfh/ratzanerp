@@ -213,7 +213,7 @@ export interface Contrato {
   criadoEm: string
 }
 
-export type FrequenciaRecorrencia = 'diaria' | 'semanal' | 'mensal'
+export type FrequenciaRecorrencia = 'diaria' | 'semanal' | 'mensal' | 'semestral'
 
 export interface Alerta {
   id: string

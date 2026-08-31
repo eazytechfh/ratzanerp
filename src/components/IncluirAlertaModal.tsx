@@ -20,6 +20,7 @@ const FREQUENCIAS: { value: FrequenciaRecorrencia; label: string }[] = [
   { value: 'diaria', label: 'Diária' },
   { value: 'semanal', label: 'Semanal' },
   { value: 'mensal', label: 'Mensal' },
+  { value: 'semestral', label: 'Semestral' },
 ]
 
 function hoje() {

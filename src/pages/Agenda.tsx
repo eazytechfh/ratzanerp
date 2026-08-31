@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2 } from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2 } from 'lucide-react'
 import { useServicos, updateServico, removeServico } from '../data/servicoStore'
 import { useOperadores } from '../data/operadorStore'
 import { registrarLog } from '../data/logStore'
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { ServicoStatusBadge } from '../components/StatusBadge'
 import DarBaixaModal from '../components/DarBaixaModal'
 import ReagendarModal from '../components/ReagendarModal'
+import { conectarGoogleCalendar, useGoogleCalendarConectado, sincronizarGoogleCalendar } from '../data/googleCalendarClient'
 import type { Servico } from '../types'
 
 type Visao = 'dia' | 'semana' | 'mes'
@@ -43,6 +44,30 @@ export default function Agenda() {
   const [selecionado, setSelecionado] = useState<Servico | null>(null)
   const [modalBaixa, setModalBaixa] = useState(false)
   const [modalReagendar, setModalReagendar] = useState(false)
+  const googleConectado = useGoogleCalendarConectado(perfil?.id)
+  const [sincronizando, setSincronizando] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const status = params.get('google')
+    if (!status) return
+    if (status === 'conectado') alert('Google Calendar conectado com sucesso!')
+    else if (status === 'erro') alert(`Não foi possível conectar ao Google Calendar: ${params.get('msg') ?? 'erro desconhecido'}`)
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [])
+
+  async function handleSincronizarGoogle() {
+    const relevantes = servicos.filter((s) => s.status === 'agendado' || s.status === 'em_andamento' || s.status === 'cancelado')
+    setSincronizando(true)
+    const resultado = await sincronizarGoogleCalendar(relevantes)
+    setSincronizando(false)
+    if (resultado.error) {
+      alert(`Falha ao sincronizar: ${resultado.error}`)
+      return
+    }
+    registrarLog(userEmail ?? 'sistema', 'Google Calendar sincronizado', `${resultado.criados ?? 0} criados, ${resultado.atualizados ?? 0} atualizados, ${resultado.cancelados ?? 0} cancelados`)
+    alert(`Sincronizado! ${resultado.criados ?? 0} criados, ${resultado.atualizados ?? 0} atualizados, ${resultado.cancelados ?? 0} removidos.`)
+  }
 
   const meuNomeOperador = useMemo(() => {
     if (perfil?.role !== 'operador' || !perfil.operadorId) return null
@@ -256,14 +281,25 @@ export default function Agenda() {
           <p className="text-slate-500 text-sm mt-0.5 capitalize">{tituloPeriodo}</p>
         </div>
         <div className="flex items-center gap-2 self-start">
-          <button
-            disabled
-            title="Integração em desenvolvimento"
-            className="hidden sm:inline-flex items-center gap-2 px-3 h-9 rounded-lg border border-slate-200 text-sm text-slate-400 cursor-not-allowed"
-          >
-            <RefreshCw size={15} />
-            Sincronizar com Google Calendar
-          </button>
+          {googleConectado === false && (
+            <button
+              onClick={() => perfil && conectarGoogleCalendar(perfil.id)}
+              className="hidden sm:inline-flex items-center gap-2 px-3 h-9 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              <Link2 size={15} />
+              Conectar Google Calendar
+            </button>
+          )}
+          {googleConectado === true && (
+            <button
+              onClick={handleSincronizarGoogle}
+              disabled={sincronizando}
+              className="hidden sm:inline-flex items-center gap-2 px-3 h-9 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {sincronizando ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+              Sincronizar com Google Calendar
+            </button>
+          )}
           <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
             {(['dia', 'semana', 'mes'] as Visao[]).map((v) => (
               <button
