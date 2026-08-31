@@ -3,6 +3,12 @@ import { Plus, CheckCircle2, X, Search, Pencil } from 'lucide-react'
 import { useContasPagar, addContaPagar, darBaixaContaPagar, cancelarContaPagar, editarContaPagar } from '../../data/contaPagarStore'
 import type { ContaPagar, StatusConta } from '../../types'
 import MoneyInput from '../MoneyInput'
+import PeriodoFiltro from './PeriodoFiltro'
+
+function mesMatch(dataStr: string, mes: Date | null) {
+  if (!mes) return true
+  return dataStr.slice(0, 7) === `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
+}
 
 const STATUS_LABEL: Record<StatusConta, string> = { pendente: 'Pendente', pago: 'Pago', cancelado: 'Cancelado' }
 const STATUS_STYLE: Record<StatusConta, string> = {
@@ -29,6 +35,7 @@ export default function ContasPagarTab() {
   const [recorrente, setRecorrente] = useState(false)
   const [repeticoes, setRepeticoes] = useState(2)
   const [editando, setEditando] = useState<ContaPagar | null>(null)
+  const [mesFiltro, setMesFiltro] = useState<Date | null>(null)
   const [, forceTick] = useState(0)
 
   // re-renderiza periodicamente para a janela de edição de 5min expirar sozinha na tela
@@ -37,15 +44,17 @@ export default function ContasPagarTab() {
     return () => clearInterval(t)
   }, [])
 
+  const contasDoPeriodo = useMemo(() => contas.filter((c) => mesMatch(c.vencimento, mesFiltro)), [contas, mesFiltro])
+
   const ordenadas = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    return [...contas]
+    return [...contasDoPeriodo]
       .filter((c) => !q || c.descricao.toLowerCase().includes(q) || c.categoria.toLowerCase().includes(q))
       .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1))
-  }, [contas, busca])
+  }, [contasDoPeriodo, busca])
 
-  const totalPendente = contas.filter((c) => c.status === 'pendente').reduce((a, c) => a + c.valor, 0)
-  const totalPago = contas.filter((c) => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
+  const totalPendente = contasDoPeriodo.filter((c) => c.status === 'pendente').reduce((a, c) => a + c.valor, 0)
+  const totalPago = contasDoPeriodo.filter((c) => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -117,6 +126,8 @@ export default function ContasPagarTab() {
           className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
         />
       </div>
+
+      <PeriodoFiltro mes={mesFiltro} onChange={setMesFiltro} />
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <table className="w-full text-sm">

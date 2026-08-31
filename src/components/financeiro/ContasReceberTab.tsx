@@ -4,6 +4,12 @@ import { useContasReceber, darBaixaContaReceber } from '../../data/receivableSto
 import { useClientes } from '../../data/clienteStore'
 import { useCobrancasAsaas, ultimaCobranca, refetchCobrancasAsaas } from '../../data/cobrancaAsaasStore'
 import { emitirBoleto, emitirNotaFiscal } from '../../data/asaasClient'
+import PeriodoFiltro from './PeriodoFiltro'
+
+function mesMatch(dataStr: string, mes: Date | null) {
+  if (!mes) return true
+  return dataStr.slice(0, 7) === `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
+}
 
 export default function ContasReceberTab() {
   const contas = useContasReceber()
@@ -11,19 +17,22 @@ export default function ContasReceberTab() {
   useCobrancasAsaas()
   const [filtro, setFiltro] = useState<'todos' | 'pendente' | 'pago'>('todos')
   const [busca, setBusca] = useState('')
+  const [mesFiltro, setMesFiltro] = useState<Date | null>(null)
   const [processando, setProcessando] = useState<string | null>(null)
   const [erroPorItem, setErroPorItem] = useState<Record<string, string>>({})
 
+  const contasDoPeriodo = useMemo(() => contas.filter((c) => mesMatch(c.vencimento, mesFiltro)), [contas, mesFiltro])
+
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    return contas
+    return contasDoPeriodo
       .filter((c) => filtro === 'todos' || c.status === filtro)
       .filter((c) => !q || c.clienteNome.toLowerCase().includes(q) || c.descricao.toLowerCase().includes(q))
       .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1))
-  }, [contas, filtro, busca])
+  }, [contasDoPeriodo, filtro, busca])
 
-  const totalPendente = contas.filter((c) => c.status === 'pendente').reduce((a, c) => a + c.valor, 0)
-  const totalPago = contas.filter((c) => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
+  const totalPendente = contasDoPeriodo.filter((c) => c.status === 'pendente').reduce((a, c) => a + c.valor, 0)
+  const totalPago = contasDoPeriodo.filter((c) => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
 
   async function handleEmitir(tipo: 'boleto' | 'nf', item: (typeof contas)[number]) {
     const cliente = clientes.find((c) => c.id === item.clienteId)
@@ -75,6 +84,8 @@ export default function ContasReceberTab() {
           className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
         />
       </div>
+
+      <PeriodoFiltro mes={mesFiltro} onChange={setMesFiltro} />
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <table className="w-full text-sm">

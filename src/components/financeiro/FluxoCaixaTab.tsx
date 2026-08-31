@@ -2,6 +2,12 @@ import React, { useMemo, useState } from 'react'
 import { ArrowUpCircle, ArrowDownCircle, Download } from 'lucide-react'
 import { useContasReceber } from '../../data/receivableStore'
 import { useContasPagar } from '../../data/contaPagarStore'
+import PeriodoFiltro from './PeriodoFiltro'
+
+function mesMatch(dataStr: string, mes: Date | null) {
+  if (!mes) return true
+  return dataStr.slice(0, 7) === `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
+}
 
 interface Movimento {
   id: string
@@ -17,6 +23,7 @@ export default function FluxoCaixaTab() {
   const contasReceber = useContasReceber()
   const contasPagar = useContasPagar()
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos')
+  const [mesFiltro, setMesFiltro] = useState<Date | null>(null)
 
   const movimentos = useMemo<Movimento[]>(() => {
     const entradas: Movimento[] = contasReceber.map((c) => ({
@@ -40,13 +47,18 @@ export default function FluxoCaixaTab() {
     return [...entradas, ...saidas].sort((a, b) => (a.data < b.data ? -1 : 1))
   }, [contasReceber, contasPagar])
 
-  const movimentosFiltrados = useMemo(
-    () => movimentos.filter((m) => filtroTipo === 'todos' || m.tipo === filtroTipo),
-    [movimentos, filtroTipo],
+  const movimentosDoPeriodo = useMemo(
+    () => movimentos.filter((m) => mesMatch(m.data, mesFiltro)),
+    [movimentos, mesFiltro],
   )
 
-  const totalEntradas = movimentos.filter((m) => m.tipo === 'entrada' && m.status === 'pago').reduce((a, m) => a + m.valor, 0)
-  const totalSaidas = movimentos.filter((m) => m.tipo === 'saida' && m.status === 'pago').reduce((a, m) => a + m.valor, 0)
+  const movimentosFiltrados = useMemo(
+    () => movimentosDoPeriodo.filter((m) => filtroTipo === 'todos' || m.tipo === filtroTipo),
+    [movimentosDoPeriodo, filtroTipo],
+  )
+
+  const totalEntradas = movimentosDoPeriodo.filter((m) => m.tipo === 'entrada' && m.status === 'pago').reduce((a, m) => a + m.valor, 0)
+  const totalSaidas = movimentosDoPeriodo.filter((m) => m.tipo === 'saida' && m.status === 'pago').reduce((a, m) => a + m.valor, 0)
   const saldo = totalEntradas - totalSaidas
 
   function handleExportar() {
@@ -97,6 +109,8 @@ export default function FluxoCaixaTab() {
           <p className={`text-xl font-bold mt-1 ${saldo >= 0 ? 'text-ink-900' : 'text-rose-600'}`}>{fmtMoeda(saldo)}</p>
         </div>
       </div>
+
+      <PeriodoFiltro mes={mesFiltro} onChange={setMesFiltro} />
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
