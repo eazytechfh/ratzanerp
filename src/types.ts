@@ -204,6 +204,7 @@ export interface ContaReceberItem {
   status: StatusConta
   origem: 'servico' | 'recorrente'
   formaPagamento?: FormaPagamento
+  tipoAtendimento?: TipoAtendimento
   parcela?: number
   totalParcelas?: number
 }

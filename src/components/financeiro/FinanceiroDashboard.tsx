@@ -41,10 +41,19 @@ export default function FinanceiroDashboard() {
   const meta = useMemo(() => getMeta(ano, mes), [metas, ano, mes])
 
   const realizado = useMemo(() => {
-    return servicosDoMes
-      .filter((s) => s.status === 'concluido' && s.tipoAtendimento === 'novo')
-      .reduce((acc, s) => acc + s.valor, 0)
-  }, [servicosDoMes])
+    return contasReceber
+      .filter((c) => {
+        const d = new Date(c.vencimento + 'T00:00:00')
+        return (
+          c.status === 'pago' &&
+          c.origem === 'servico' &&
+          c.tipoAtendimento === 'novo' &&
+          d.getFullYear() === ano &&
+          d.getMonth() + 1 === mes
+        )
+      })
+      .reduce((acc, c) => acc + c.valor, 0)
+  }, [contasReceber, ano, mes])
 
   const atingimento = meta > 0 ? Math.round((realizado / meta) * 100) : 0
 

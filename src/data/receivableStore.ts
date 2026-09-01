@@ -80,6 +80,7 @@ export function useContasReceber(): ContaReceberItem[] {
           status: overridesAtuais.has(id) ? 'pago' : 'pendente',
           origem: 'servico',
           formaPagamento: s.formaPagamento,
+          tipoAtendimento: s.tipoAtendimento,
           parcela: idx + 1,
           totalParcelas: total,
         })
@@ -98,6 +99,7 @@ export function useContasReceber(): ContaReceberItem[] {
       status: overridesAtuais.has(id) || s.status === 'concluido' ? 'pago' : 'pendente',
       origem: 'servico',
       formaPagamento: s.formaPagamento,
+      tipoAtendimento: s.tipoAtendimento,
     })
   })
 
