@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useServicos } from './servicoStore'
 import { useClientes } from './clienteStore'
+import { useContasReceberManuais } from './manualReceivableStore'
 import type { ContaReceberItem } from '../types'
 
 let overrides = new Set<string>()
@@ -59,9 +60,23 @@ function fmtDate(d: Date) {
 export function useContasReceber(): ContaReceberItem[] {
   const servicos = useServicos()
   const clientes = useClientes()
+  const manuais = useContasReceberManuais()
   const overridesAtuais = useOverrides()
 
   const itens: ContaReceberItem[] = []
+
+  manuais.forEach((m) => {
+    itens.push({
+      id: `man-${m.id}`,
+      clienteId: m.clienteId,
+      clienteNome: m.clienteNome,
+      descricao: m.descricao,
+      valor: m.valor,
+      vencimento: m.vencimento,
+      status: m.status === 'pago' ? 'pago' : 'pendente',
+      origem: 'manual',
+    })
+  })
 
   servicos.forEach((s) => {
     if (!s.contabilizarReceita) return

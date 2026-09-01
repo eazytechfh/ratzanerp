@@ -202,11 +202,23 @@ export interface ContaReceberItem {
   valor: number
   vencimento: string
   status: StatusConta
-  origem: 'servico' | 'recorrente'
+  origem: 'servico' | 'recorrente' | 'manual'
   formaPagamento?: FormaPagamento
   tipoAtendimento?: TipoAtendimento
   parcela?: number
   totalParcelas?: number
+}
+
+export interface ContaReceberManual {
+  id: string
+  clienteId: string
+  clienteNome: string
+  descricao: string
+  valor: number
+  vencimento: string
+  status: StatusConta
+  dataPagamento?: string
+  criadoEm?: string
 }
 
 export const PERIODICIDADES = ['Mensal', 'Bimestral', 'Trimestral', 'Semestral', 'Anual', 'Avulso'] as const
