@@ -52,7 +52,7 @@ export default function OrdemServicoDoc({ servico, cliente }: Props) {
   const categoria = getCategoriaById(cliente?.categoriaId)?.nome
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-4 max-w-3xl mx-auto">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-4 max-w-3xl mx-auto print:rounded-none print:border-0 print:shadow-none print:max-w-none print:mx-0">
       <OSHeader titulo="ORDEM DE SERVIÇO" />
 
       <div>

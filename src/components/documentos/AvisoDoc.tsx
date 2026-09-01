@@ -22,7 +22,7 @@ export default function AvisoDoc({ servico }: Props) {
   const dataHora = fmtAviso(servico.dataAgendada, servico.horaAgendada)
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden max-w-2xl mx-auto">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden max-w-2xl mx-auto print:rounded-none print:border-0 print:shadow-none print:max-w-none print:mx-0">
       <div className="bg-brand-600 px-6 py-6 text-center">
         <p className="text-white text-4xl font-black tracking-tight leading-none">AVISO</p>
         <p className="text-white text-lg font-bold mt-1">de DESINSETIZAÇÃO</p>

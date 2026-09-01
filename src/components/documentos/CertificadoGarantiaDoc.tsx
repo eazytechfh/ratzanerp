@@ -49,7 +49,7 @@ export default function CertificadoGarantiaDoc({ servico, cliente }: Props) {
   const pragas = (baixa?.pragas ?? servico.pragas)
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-4 max-w-3xl mx-auto">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-4 max-w-3xl mx-auto print:rounded-none print:border-0 print:shadow-none print:max-w-none print:mx-0">
       <CertificadoHeader />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">

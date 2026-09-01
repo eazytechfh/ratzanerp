@@ -32,7 +32,7 @@ export default function ContratoDoc({ contrato }: Props) {
   const assinatura = new Date(contrato.dataAssinatura + 'T00:00:00')
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-8 max-w-3xl mx-auto space-y-5">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-8 max-w-3xl mx-auto space-y-5 print:rounded-none print:border-0 print:shadow-none print:max-w-none print:mx-0">
       <div className="text-center border-b border-slate-100 pb-4">
         <p className="text-brand-600 text-3xl font-extrabold tracking-tight">RATZAN</p>
         <p className="text-xs text-slate-500 mt-1">RATZAN - CONTROLE DE PRAGAS &nbsp;CNPJ: 43.238.618/0001-05 | ☏ +55 (21) 98117-4376</p>
