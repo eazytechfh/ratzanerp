@@ -56,24 +56,24 @@ export default function Servicos() {
           <h1 className="text-2xl font-bold text-ink-900">Serviços</h1>
           <p className="text-slate-500 text-sm mt-0.5">{servicos.length} ordens de serviço registradas</p>
         </div>
-        <div className="flex items-center gap-2 self-start">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setTiposOpen(true)}
-            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
           >
             <Wrench size={18} />
             Tipos de Serviço
           </button>
           <button
             onClick={() => setTiposPragaOpen(true)}
-            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
           >
             <Bug size={18} />
             Tipos de Praga
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
           >
             <Plus size={18} />
             Cadastrar novo serviço

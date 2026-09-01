@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
-import type { Cliente, Endereco, StatusCliente } from '../types'
+import type { Cliente, Endereco, StatusCliente, SegmentoCliente } from '../types'
+import { SEGMENTOS_CLIENTE } from '../types'
 import { updateCliente } from '../data/clienteStore'
 import { useCategorias } from '../data/categoriaStore'
 import { registrarLog } from '../data/logStore'
@@ -31,6 +32,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
   const [contratoInicio, setContratoInicio] = useState(cliente.contratoInicio)
   const [contratoFim, setContratoFim] = useState(cliente.contratoFim)
   const [enderecos, setEnderecos] = useState<Endereco[]>(cliente.enderecos)
+  const [segmento, setSegmento] = useState<SegmentoCliente | ''>(cliente.segmento ?? '')
   const [possuiPet, setPossuiPet] = useState(cliente.possuiPet)
   const [precisaEpi, setPrecisaEpi] = useState(cliente.precisaEpi)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -61,6 +63,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
       enderecos,
       possuiPet,
       precisaEpi,
+      segmento: segmento || undefined,
     })
     registrarLog(userEmail ?? 'sistema', 'Cliente editado', nome.trim())
     onClose()
@@ -168,6 +171,28 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
                   <option key={cat.id} value={cat.id}>{cat.nome}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Segmento <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {SEGMENTOS_CLIENTE.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSegmento((prev) => (prev === s ? '' : s))}
+                  className={`py-2 rounded-lg text-sm font-semibold border transition ${
+                    segmento === s
+                      ? 'bg-brand-600 border-brand-600 text-white'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
 

@@ -6,7 +6,8 @@ import { useCategorias, getCategoriaById } from '../data/categoriaStore'
 import { ClienteStatusBadge } from '../components/StatusBadge'
 import NovoClienteModal from '../components/NovoClienteModal'
 import CategoriasModal from '../components/CategoriasModal'
-import type { StatusCliente } from '../types'
+import type { StatusCliente, SegmentoCliente } from '../types'
+import { SEGMENTOS_CLIENTE } from '../types'
 
 type FiltroStatus = 'todos' | StatusCliente
 
@@ -28,6 +29,7 @@ export default function Clientes() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [filtro, setFiltro] = useState<FiltroStatus>('todos')
+  const [filtroSegmento, setFiltroSegmento] = useState<SegmentoCliente | 'todos'>('todos')
   const [busca, setBusca] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [categoriasOpen, setCategoriasOpen] = useState(false)
@@ -40,6 +42,7 @@ export default function Clientes() {
   const filtrados = useMemo(() => {
     return clientes.filter((c) => {
       const matchStatus = filtro === 'todos' || c.status === filtro
+      const matchSegmento = filtroSegmento === 'todos' || c.segmento === filtroSegmento
       const q = busca.trim().toLowerCase()
       const matchBusca =
         !q ||
@@ -47,9 +50,9 @@ export default function Clientes() {
         (c.cnpj ?? '').toLowerCase().includes(q) ||
         (c.cpf ?? '').toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q)
-      return matchStatus && matchBusca
+      return matchStatus && matchSegmento && matchBusca
     })
-  }, [clientes, filtro, busca])
+  }, [clientes, filtro, filtroSegmento, busca])
 
   const counts = useMemo(() => {
     const c: Record<FiltroStatus, number> = { todos: clientes.length, ativo: 0, vencendo: 0, vencido: 0, inativo: 0 }
@@ -112,6 +115,28 @@ export default function Clientes() {
           </div>
         </div>
 
+        <div className="px-4 pb-4 flex gap-1.5 overflow-x-auto">
+          <button
+            onClick={() => setFiltroSegmento('todos')}
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+              filtroSegmento === 'todos' ? 'bg-ink-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Todos os segmentos
+          </button>
+          {SEGMENTOS_CLIENTE.map((s) => (
+            <button
+              key={s}
+              onClick={() => setFiltroSegmento(s)}
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+                filtroSegmento === s ? 'bg-ink-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -139,7 +164,10 @@ export default function Clientes() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-ink-900 truncate max-w-[220px]">{c.nome}</p>
-                        <p className="text-xs text-slate-400">{c.tipo === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física'}</p>
+                        <p className="text-xs text-slate-400">
+                          {c.tipo === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física'}
+                          {c.segmento ? ` · ${c.segmento}` : ''}
+                        </p>
                       </div>
                     </div>
                   </td>

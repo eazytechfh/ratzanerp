@@ -22,6 +22,7 @@ interface ClienteRow {
   origem: string
   observacoes: string | null
   contato_responsavel: string | null
+  segmento: string | null
 }
 
 function fromRow(r: ClienteRow): Cliente {
@@ -46,6 +47,7 @@ function fromRow(r: ClienteRow): Cliente {
     origem: r.origem as Cliente['origem'],
     observacoes: r.observacoes ?? undefined,
     contatoResponsavel: r.contato_responsavel ?? undefined,
+    segmento: (r.segmento as Cliente['segmento']) ?? undefined,
   }
 }
 
@@ -71,6 +73,7 @@ function toRow(c: Cliente): ClienteRow {
     origem: c.origem,
     observacoes: c.observacoes ?? null,
     contato_responsavel: c.contatoResponsavel ?? null,
+    segmento: c.segmento ?? null,
   }
 }
 

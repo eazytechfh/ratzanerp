@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
-import type { Cliente, Endereco, TipoPessoa, OrigemServico } from '../types'
-import { ORIGENS_SERVICO } from '../types'
+import type { Cliente, Endereco, TipoPessoa, OrigemServico, SegmentoCliente } from '../types'
+import { ORIGENS_SERVICO, SEGMENTOS_CLIENTE } from '../types'
 import { addCliente } from '../data/clienteStore'
 import { useCategorias } from '../data/categoriaStore'
 import { addAlerta } from '../data/alertaStore'
@@ -37,6 +37,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
   const [possuiPet, setPossuiPet] = useState(false)
   const [precisaEpi, setPrecisaEpi] = useState(false)
   const [origem, setOrigem] = useState<OrigemServico>('Indicação')
+  const [segmento, setSegmento] = useState<SegmentoCliente | ''>('')
   const [contratoFim, setContratoFim] = useState('')
   const [reforcoSemestral, setReforcoSemestral] = useState(false)
   const [dataReforco, setDataReforco] = useState('')
@@ -83,6 +84,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
       possuiPet,
       precisaEpi,
       origem,
+      segmento: segmento || undefined,
     }
 
     const created = await addCliente(novo)
@@ -251,6 +253,29 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
                 <option key={o} value={o}>{o}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Segmento <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {SEGMENTOS_CLIENTE.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSegmento((prev) => (prev === s ? '' : s))}
+                  className={`py-2 rounded-lg text-sm font-semibold border transition ${
+                    segmento === s
+                      ? 'bg-brand-600 border-brand-600 text-white'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Cliente {segmento ? segmento.toLowerCase() : '—'}: usado para segmentar/filtrar a base de clientes.</p>
           </div>
 
           <EnderecosEditor enderecos={enderecos} onChange={setEnderecos} />

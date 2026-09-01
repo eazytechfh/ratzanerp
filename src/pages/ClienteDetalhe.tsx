@@ -79,7 +79,7 @@ export default function ClienteDetalhe() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <button
           onClick={() => navigate('/clientes')}
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-ink-900 transition"
@@ -87,31 +87,31 @@ export default function ClienteDetalhe() {
           <ArrowLeft size={16} />
           Voltar para clientes
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setNovoServicoOpen(true)}
-            className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
           >
             <Wrench size={16} />
             Criar serviço
           </button>
           <button
             onClick={() => setNovoAlertaOpen(true)}
-            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
           >
             <Bell size={16} />
             Incluir alerta
           </button>
           <button
             onClick={() => setNovoContratoOpen(true)}
-            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
           >
             <FileText size={16} />
             Gerar contrato
           </button>
           <button
             onClick={() => setEditOpen(true)}
-            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
           >
             <Pencil size={16} />
             Editar cliente
@@ -119,7 +119,7 @@ export default function ClienteDetalhe() {
           {podeExcluir && (
             <button
               onClick={handleExcluirCliente}
-              className="inline-flex items-center gap-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+              className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
             >
               <Trash2 size={16} />
               Excluir cliente
@@ -139,6 +139,11 @@ export default function ClienteDetalhe() {
               <p className="text-sm text-slate-500">{cliente.tipo === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física'} · {cliente.cnpj || cliente.cpf || 'Sem documento'}</p>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <ClienteStatusBadge status={cliente.status} />
+                {cliente.segmento && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Cliente {cliente.segmento}
+                  </span>
+                )}
                 {cliente.recorrente && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
                     <Repeat size={12} /> Recorrente
