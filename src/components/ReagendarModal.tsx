@@ -14,6 +14,7 @@ interface Props {
 const OPCOES = [
   { key: 'amanha', label: 'Amanhã' },
   { key: 'semana', label: 'Esta semana' },
+  { key: 'escolher', label: 'Escolher data' },
 ]
 
 function fmtDate(d: Date) {
@@ -29,17 +30,33 @@ function addDays(base: Date, days: number) {
 export default function ReagendarModal({ servico, onClose }: Props) {
   const { userEmail } = useAuth()
   const [opcao, setOpcao] = useState('amanha')
+  const [dataEscolhida, setDataEscolhida] = useState(servico.dataAgendada)
+  const [horaEscolhida, setHoraEscolhida] = useState(servico.horaAgendada)
+  const [erro, setErro] = useState('')
 
   function handleConfirmar() {
+    if (opcao === 'escolher' && !dataEscolhida) {
+      setErro('Escolha a nova data')
+      return
+    }
+
     const hoje = new Date()
-    const novaData = opcao === 'amanha' ? addDays(hoje, 1) : addDays(hoje, 7 - hoje.getDay())
+    const novaData =
+      opcao === 'amanha' ? fmtDate(addDays(hoje, 1))
+      : opcao === 'semana' ? fmtDate(addDays(hoje, 7 - hoje.getDay()))
+      : dataEscolhida
+    const novaHora = opcao === 'escolher' ? horaEscolhida : servico.horaAgendada
+
     const atualizado: Servico = {
       ...servico,
       status: 'agendado',
-      dataAgendada: fmtDate(novaData),
+      dataAgendada: novaData,
+      horaAgendada: novaHora,
     }
-    updateServico(servico.id, { status: 'agendado', dataAgendada: fmtDate(novaData) })
-    const opcaoLabel = OPCOES.find((o) => o.key === opcao)?.label ?? opcao
+    updateServico(servico.id, { status: 'agendado', dataAgendada: novaData, horaAgendada: novaHora })
+    const opcaoLabel = opcao === 'escolher'
+      ? `${new Date(novaData + 'T00:00:00').toLocaleDateString('pt-BR')} às ${novaHora}`
+      : OPCOES.find((o) => o.key === opcao)?.label ?? opcao
     dispararWebhookReagendamento(atualizado, opcaoLabel)
     registrarLog(userEmail ?? 'sistema', 'Serviço reagendado', `${servico.clienteNome} — ${opcaoLabel}`)
     onClose()
@@ -65,7 +82,7 @@ export default function ReagendarModal({ servico, onClose }: Props) {
             {OPCOES.map((o) => (
               <button
                 key={o.key}
-                onClick={() => setOpcao(o.key)}
+                onClick={() => { setOpcao(o.key); setErro('') }}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition ${
                   opcao === o.key
                     ? 'bg-brand-600 border-brand-600 text-white'
@@ -76,6 +93,30 @@ export default function ReagendarModal({ servico, onClose }: Props) {
               </button>
             ))}
           </div>
+
+          {opcao === 'escolher' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Data</label>
+                <input
+                  type="date"
+                  value={dataEscolhida}
+                  onChange={(e) => setDataEscolhida(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Hora</label>
+                <input
+                  type="time"
+                  value={horaEscolhida}
+                  onChange={(e) => setHoraEscolhida(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                />
+              </div>
+              {erro && <p className="col-span-2 text-xs text-rose-600">{erro}</p>}
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
