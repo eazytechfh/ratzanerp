@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Wrench, Bug, ChevronRight } from 'lucide-react'
+import { Plus, Search, Wrench, Bug, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
 import { useServicos } from '../data/servicoStore'
 import { ServicoStatusBadge } from '../components/StatusBadge'
 import NovoServicoModal from '../components/NovoServicoModal'
@@ -25,6 +25,11 @@ export default function Servicos() {
   const [modalOpen, setModalOpen] = useState(false)
   const [tiposOpen, setTiposOpen] = useState(false)
   const [tiposPragaOpen, setTiposPragaOpen] = useState(false)
+  const [ordem, setOrdem] = useState<'desc' | 'asc'>('desc')
+
+  function alternarOrdem() {
+    setOrdem((prev) => (prev === 'desc' ? 'asc' : 'desc'))
+  }
 
   const filtrados = useMemo(() => {
     return servicos
@@ -38,8 +43,14 @@ export default function Servicos() {
           s.operador.toLowerCase().includes(q)
         return matchStatus && matchBusca
       })
-      .sort((a, b) => (a.dataAgendada < b.dataAgendada ? 1 : -1))
-  }, [servicos, filtro, busca])
+      .sort((a, b) => {
+        const chaveA = `${a.dataAgendada} ${a.horaAgendada}`
+        const chaveB = `${b.dataAgendada} ${b.horaAgendada}`
+        if (chaveA === chaveB) return 0
+        const maiorPrimeiro = chaveA < chaveB ? 1 : -1
+        return ordem === 'desc' ? maiorPrimeiro : -maiorPrimeiro
+      })
+  }, [servicos, filtro, busca, ordem])
 
   const counts = useMemo(() => {
     const c: Record<FiltroStatus, number> = { todos: servicos.length, agendado: 0, em_andamento: 0, concluido: 0, cancelado: 0 }
@@ -113,7 +124,16 @@ export default function Servicos() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-100">
-                <th className="px-4 py-3 font-medium">Data / Hora</th>
+                <th className="px-4 py-3 font-medium">
+                  <button
+                    onClick={alternarOrdem}
+                    className="inline-flex items-center gap-1 hover:text-ink-900 transition"
+                    title="Ordenar por data"
+                  >
+                    Data / Hora
+                    {ordem === 'desc' ? <ArrowDown size={13} /> : <ArrowUp size={13} />}
+                  </button>
+                </th>
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium hidden md:table-cell">Serviço</th>
                 <th className="px-4 py-3 font-medium hidden lg:table-cell">Operador</th>
