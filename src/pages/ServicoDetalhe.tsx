@@ -49,7 +49,7 @@ export default function ServicoDetalhe() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <button
           onClick={() => navigate('/servicos')}
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-ink-900 transition"
@@ -68,7 +68,7 @@ export default function ServicoDetalhe() {
         )}
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-slate-200">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 print:hidden">
         {ABAS.map((a) => (
           <button
             key={a.key}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X, CheckCircle2, ShieldAlert } from 'lucide-react'
 import type { Servico, TipoAplicacao } from '../types'
-import { PRAGAS } from '../types'
+import { useTiposPraga } from '../data/tipoPragaStore'
 import { updateServico } from '../data/servicoStore'
 import { dispararWebhookConclusao } from '../data/webhooks'
 import { registrarLog } from '../data/logStore'
@@ -21,6 +21,7 @@ function fmtDate(d: Date) {
 
 export default function DarBaixaModal({ servico, onClose }: Props) {
   const { userEmail } = useAuth()
+  const tiposPraga = useTiposPraga()
   const [dataServico, setDataServico] = useState(fmtDate(new Date()))
   const [garantiaAte, setGarantiaAte] = useState(servico.garantiaAte ?? '')
   const [horaInicio, setHoraInicio] = useState(servico.horaAgendada)
@@ -174,15 +175,15 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Pragas</label>
             <div className="grid grid-cols-2 gap-2">
-              {PRAGAS.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-lg px-2.5 py-1.5">
+              {tiposPraga.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-lg px-2.5 py-1.5">
                   <input
                     type="checkbox"
-                    checked={pragas.includes(p)}
-                    onChange={() => togglePraga(p)}
+                    checked={pragas.includes(p.nome)}
+                    onChange={() => togglePraga(p.nome)}
                     className="rounded border-slate-300 text-brand-600 focus:ring-brand-200"
                   />
-                  {p}
+                  {p.nome}
                 </label>
               ))}
             </div>

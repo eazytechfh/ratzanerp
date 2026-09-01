@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Wrench, ChevronRight } from 'lucide-react'
+import { Plus, Search, Wrench, Bug, ChevronRight } from 'lucide-react'
 import { useServicos } from '../data/servicoStore'
 import { ServicoStatusBadge } from '../components/StatusBadge'
 import NovoServicoModal from '../components/NovoServicoModal'
 import TiposServicoModal from '../components/TiposServicoModal'
+import TiposPragaModal from '../components/TiposPragaModal'
 import type { StatusServico } from '../types'
 
 type FiltroStatus = 'todos' | StatusServico
@@ -14,7 +15,6 @@ const FILTROS: { key: FiltroStatus; label: string }[] = [
   { key: 'agendado', label: 'Agendados' },
   { key: 'em_andamento', label: 'Em andamento' },
   { key: 'concluido', label: 'Concluídos' },
-  { key: 'cancelado', label: 'Cancelados' },
 ]
 
 export default function Servicos() {
@@ -24,6 +24,7 @@ export default function Servicos() {
   const [busca, setBusca] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [tiposOpen, setTiposOpen] = useState(false)
+  const [tiposPragaOpen, setTiposPragaOpen] = useState(false)
 
   const filtrados = useMemo(() => {
     return servicos
@@ -62,6 +63,13 @@ export default function Servicos() {
           >
             <Wrench size={18} />
             Tipos de Serviço
+          </button>
+          <button
+            onClick={() => setTiposPragaOpen(true)}
+            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
+          >
+            <Bug size={18} />
+            Tipos de Praga
           </button>
           <button
             onClick={() => setModalOpen(true)}
@@ -149,6 +157,7 @@ export default function Servicos() {
 
       {modalOpen && <NovoServicoModal onClose={() => setModalOpen(false)} />}
       {tiposOpen && <TiposServicoModal onClose={() => setTiposOpen(false)} />}
+      {tiposPragaOpen && <TiposPragaModal onClose={() => setTiposPragaOpen(false)} />}
     </div>
   )
 }

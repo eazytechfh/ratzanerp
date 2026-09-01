@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, Wrench, Wallet, Bug, Menu, X, LogOut, ChevronDown, UsersRound, CalendarDays, History,
+  LayoutDashboard, Users, Wrench, Wallet, Bug, Menu, X, LogOut, ChevronDown, UsersRound, CalendarDays, History, Truck,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { canAccessRoute } from '../lib/permissions'
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/servicos', label: 'Serviços', icon: Wrench },
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
   { to: '/equipe', label: 'Equipe', icon: UsersRound },
+  { to: '/fornecedores', label: 'Fornecedores', icon: Truck },
   { to: '/financeiro', label: 'Financeiro', icon: Wallet },
   { to: '/logs', label: 'Logs', icon: History },
 ]

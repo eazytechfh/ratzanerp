@@ -22,3 +22,16 @@ body {
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
+
+/* Impressão: mostra só o documento (OS, certificado, contrato, aviso),
+   escondendo o menu lateral, cabeçalho e qualquer elemento marcado como print:hidden. */
+@media print {
+  aside,
+  header {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

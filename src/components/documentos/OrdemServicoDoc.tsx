@@ -65,7 +65,14 @@ export default function OrdemServicoDoc({ servico, cliente }: Props) {
         <Campo label="E-mail do Cliente:">{cliente?.email ?? '-'}</Campo>
         <Campo label="Endereço do Serviço:">{servico.endereco || '-'}</Campo>
         <Campo label="Bairro:">{cliente?.bairro ?? '-'}</Campo>
-        <Campo label="Forma de Pagamento"><Badge>{FORMA_LABEL[servico.formaPagamento]}</Badge></Campo>
+        <Campo label="Valor do Serviço">
+          <span className="text-base font-bold text-brand-700">
+            {servico.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </span>
+        </Campo>
+        <Campo label="Forma de Pagamento">
+          <Badge>{FORMA_LABEL[servico.formaPagamento]}{servico.parcelas ? ` · ${servico.parcelas}x` : ''}</Badge>
+        </Campo>
         <Campo label="Serviço (s) Contratado (s)"><Badge>{servico.tipoServico}</Badge></Campo>
         <Campo label="Qual praga?">{pragas.map((p) => <Badge key={p}>{p}</Badge>)}</Campo>
         <Campo label="Categoria">{categoria ? <Badge>{categoria}</Badge> : '-'}</Campo>

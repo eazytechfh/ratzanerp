@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil } from 'lucide-react'
 import { useServicos, updateServico, removeServico } from '../data/servicoStore'
 import { useOperadores } from '../data/operadorStore'
 import { registrarLog } from '../data/logStore'
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { ServicoStatusBadge } from '../components/StatusBadge'
 import DarBaixaModal from '../components/DarBaixaModal'
 import ReagendarModal from '../components/ReagendarModal'
+import EditarServicoModal from '../components/EditarServicoModal'
 import { conectarGoogleCalendar, useGoogleCalendarConectado, sincronizarGoogleCalendar } from '../data/googleCalendarClient'
 import type { Servico } from '../types'
 
@@ -44,6 +45,7 @@ export default function Agenda() {
   const [selecionado, setSelecionado] = useState<Servico | null>(null)
   const [modalBaixa, setModalBaixa] = useState(false)
   const [modalReagendar, setModalReagendar] = useState(false)
+  const [modalEditar, setModalEditar] = useState(false)
   const googleConectado = useGoogleCalendarConectado(perfil?.id)
   const [sincronizando, setSincronizando] = useState(false)
 
@@ -96,11 +98,8 @@ export default function Agenda() {
   }
 
   function handleCancelar(s: Servico) {
-    if (!window.confirm(`Cancelar o serviço de ${s.clienteNome}?`)) return
-    updateServico(s.id, {
-      status: 'cancelado',
-      contabilizarReceita: s.tipoAtendimento === 'reforco' ? s.contabilizarReceita : false,
-    })
+    if (!window.confirm(`Cancelar o serviço de ${s.clienteNome}? O serviço será excluído da agenda e do contas a receber.`)) return
+    removeServico(s.id)
     registrarLog(userEmail ?? 'sistema', 'Serviço cancelado', `${s.tipoServico} — ${s.clienteNome}`)
   }
 
@@ -142,6 +141,12 @@ export default function Agenda() {
           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200"
         >
           <CalendarClock size={13} /> Reagendar
+        </button>
+        <button
+          onClick={() => { setSelecionado(s); setModalEditar(true) }}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+        >
+          <Pencil size={13} /> Editar
         </button>
         <button
           onClick={() => handleCancelar(s)}
@@ -334,6 +339,9 @@ export default function Agenda() {
       )}
       {modalReagendar && selecionado && (
         <ReagendarModal servico={selecionado} onClose={() => { setModalReagendar(false); setSelecionado(null) }} />
+      )}
+      {modalEditar && selecionado && (
+        <EditarServicoModal servico={selecionado} onClose={() => { setModalEditar(false); setSelecionado(null) }} />
       )}
     </div>
   )

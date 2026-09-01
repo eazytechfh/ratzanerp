@@ -17,7 +17,7 @@ export interface CategoriaCliente {
   cor: string
 }
 
-export const ORIGENS_SERVICO = ['Indicação', 'Site', 'Redes Sociais', 'Tráfego Pago', 'Telefone', 'Outro'] as const
+export const ORIGENS_SERVICO = ['Indicação', 'Site', 'Redes Sociais', 'Tráfego Pago', 'Telefone', 'Já é Cliente', 'Outro'] as const
 export type OrigemServico = (typeof ORIGENS_SERVICO)[number]
 
 export interface Cliente {
@@ -62,6 +62,11 @@ export interface TipoServicoItem {
   nome: string
 }
 
+export interface TipoPragaItem {
+  id: string
+  nome: string
+}
+
 export const PRAGAS = [
   'Baratas',
   'Cupins',
@@ -75,11 +80,12 @@ export const PRAGAS = [
   'Carrapatos/Pulgas',
 ] as const
 
-export type Maquininha = 'infinity' | 'itau'
+export type Maquininha = 'infinity' | 'itau' | 'santander'
 
 export const MAQUININHAS: { value: Maquininha; label: string }[] = [
   { value: 'infinity', label: 'Infinity' },
   { value: 'itau', label: 'Itaú' },
+  { value: 'santander', label: 'Santander' },
 ]
 
 // Taxas fictícias — ajustar quando os dados reais das maquininhas forem informados.
@@ -91,6 +97,10 @@ export const TAXAS_MAQUININHA: Record<Maquininha, { debito: number; credito: (pa
   itau: {
     debito: 0.0179,
     credito: (parcelas) => 0.0349 + (Math.max(parcelas, 1) - 1) * 0.0129,
+  },
+  santander: {
+    debito: 0.0169,
+    credito: (parcelas) => 0.0319 + (Math.max(parcelas, 1) - 1) * 0.0124,
   },
 }
 
@@ -158,11 +168,24 @@ export interface MetaMensal {
   valor: number
 }
 
+export interface Fornecedor {
+  id: string
+  nome: string
+  tipoPrestacaoServico: string
+  cnpj?: string
+  cpf?: string
+  email?: string
+  telefone?: string
+  endereco?: string
+  observacoes?: string
+}
+
 export type StatusConta = 'pendente' | 'pago' | 'cancelado'
 
 export interface ContaPagar {
   id: string
   descricao: string
+  fornecedorId?: string
   categoria: string
   valor: number
   vencimento: string

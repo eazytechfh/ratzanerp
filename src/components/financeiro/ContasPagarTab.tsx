@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Plus, CheckCircle2, X, Search, Pencil } from 'lucide-react'
 import { useContasPagar, addContaPagar, darBaixaContaPagar, cancelarContaPagar, editarContaPagar } from '../../data/contaPagarStore'
+import { useFornecedores } from '../../data/fornecedorStore'
 import type { ContaPagar, StatusConta } from '../../types'
 import MoneyInput from '../MoneyInput'
 import PeriodoFiltro from './PeriodoFiltro'
@@ -17,17 +18,12 @@ const STATUS_STYLE: Record<StatusConta, string> = {
   cancelado: 'bg-slate-100 text-slate-500 border-slate-200',
 }
 
-const JANELA_EDICAO_MS = 5 * 60 * 1000
-
-function dentroDaJanelaEdicao(criadoEm?: string) {
-  if (!criadoEm) return false
-  return Date.now() - new Date(criadoEm).getTime() < JANELA_EDICAO_MS
-}
-
 export default function ContasPagarTab() {
   const contas = useContasPagar()
+  const fornecedores = useFornecedores()
   const [modalOpen, setModalOpen] = useState(false)
   const [descricao, setDescricao] = useState('')
+  const [fornecedorId, setFornecedorId] = useState('')
   const [categoria, setCategoria] = useState('')
   const [valor, setValor] = useState(0)
   const [vencimento, setVencimento] = useState('')
@@ -36,13 +32,6 @@ export default function ContasPagarTab() {
   const [repeticoes, setRepeticoes] = useState(2)
   const [editando, setEditando] = useState<ContaPagar | null>(null)
   const [mesFiltro, setMesFiltro] = useState<Date | null>(null)
-  const [, forceTick] = useState(0)
-
-  // re-renderiza periodicamente para a janela de edição de 5min expirar sozinha na tela
-  useEffect(() => {
-    const t = setInterval(() => forceTick((n) => n + 1), 15000)
-    return () => clearInterval(t)
-  }, [])
 
   const contasDoPeriodo = useMemo(() => contas.filter((c) => mesMatch(c.vencimento, mesFiltro)), [contas, mesFiltro])
 
@@ -56,6 +45,10 @@ export default function ContasPagarTab() {
   const totalPendente = contasDoPeriodo.filter((c) => c.status === 'pendente').reduce((a, c) => a + c.valor, 0)
   const totalPago = contasDoPeriodo.filter((c) => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
 
+  function nomeFornecedor(id?: string) {
+    return fornecedores.find((f) => f.id === id)?.nome
+  }
+
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!descricao.trim() || !valor || !vencimento) return
@@ -68,6 +61,7 @@ export default function ContasPagarTab() {
       const nova: ContaPagar = {
         id: `cp-${Date.now()}-${i}`,
         descricao: recorrente ? `${descricao.trim()} (${i + 1}/${qtd})` : descricao.trim(),
+        fornecedorId: fornecedorId || undefined,
         categoria: categoria.trim() || 'Geral',
         valor,
         vencimento: vencimentoOcorrencia,
@@ -77,6 +71,7 @@ export default function ContasPagarTab() {
     }
 
     setDescricao('')
+    setFornecedorId('')
     setCategoria('')
     setValor(0)
     setVencimento('')
@@ -95,6 +90,7 @@ export default function ContasPagarTab() {
     if (!editando) return
     editarContaPagar(editando.id, {
       descricao: editando.descricao,
+      fornecedorId: editando.fornecedorId || undefined,
       categoria: editando.categoria,
       valor: editando.valor,
       vencimento: editando.vencimento,
@@ -134,6 +130,7 @@ export default function ContasPagarTab() {
           <thead>
             <tr className="text-left text-slate-500 border-b border-slate-100">
               <th className="px-4 py-3 font-medium">Descrição</th>
+              <th className="px-4 py-3 font-medium hidden md:table-cell">Fornecedor</th>
               <th className="px-4 py-3 font-medium hidden sm:table-cell">Categoria</th>
               <th className="px-4 py-3 font-medium">Vencimento</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -145,6 +142,7 @@ export default function ContasPagarTab() {
             {ordenadas.map((c) => (
               <tr key={c.id} className="border-b border-slate-50 last:border-0">
                 <td className="px-4 py-3 font-medium text-ink-900">{c.descricao}</td>
+                <td className="px-4 py-3 hidden md:table-cell text-slate-600">{nomeFornecedor(c.fornecedorId) ?? '-'}</td>
                 <td className="px-4 py-3 hidden sm:table-cell text-slate-600">{c.categoria}</td>
                 <td className="px-4 py-3 text-slate-600">{new Date(c.vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td className="px-4 py-3">
@@ -156,11 +154,9 @@ export default function ContasPagarTab() {
                 <td className="px-4 py-3">
                   {c.status === 'pendente' && (
                     <div className="flex items-center gap-1 justify-end">
-                      {dentroDaJanelaEdicao(c.criadoEm) && (
-                        <button onClick={() => setEditando(c)} className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100" title="Editar (até 5 minutos após criar)">
-                          <Pencil size={16} />
-                        </button>
-                      )}
+                      <button onClick={() => setEditando(c)} className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100" title="Editar">
+                        <Pencil size={16} />
+                      </button>
                       <button onClick={() => darBaixaContaPagar(c.id)} className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50" title="Dar baixa">
                         <CheckCircle2 size={16} />
                       </button>
@@ -188,6 +184,19 @@ export default function ContasPagarTab() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Descrição</label>
                 <input value={descricao} onChange={(e) => setDescricao(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Fornecedor <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <select
+                  value={fornecedorId}
+                  onChange={(e) => setFornecedorId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500 bg-white"
+                >
+                  <option value="">Sem fornecedor</option>
+                  {fornecedores.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nome}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Categoria</label>
@@ -251,6 +260,19 @@ export default function ContasPagarTab() {
                   onChange={(e) => setEditando({ ...editando, descricao: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Fornecedor <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <select
+                  value={editando.fornecedorId ?? ''}
+                  onChange={(e) => setEditando({ ...editando, fornecedorId: e.target.value || undefined })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500 bg-white"
+                >
+                  <option value="">Sem fornecedor</option>
+                  {fornecedores.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nome}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Categoria</label>

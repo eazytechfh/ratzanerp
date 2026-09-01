@@ -4,6 +4,7 @@ import type { ContaPagar } from '../types'
 interface ContaPagarRow {
   id: string
   descricao: string
+  fornecedor_id: string | null
   categoria: string | null
   valor: number
   vencimento: string
@@ -16,6 +17,7 @@ function fromRow(r: ContaPagarRow): ContaPagar {
   return {
     id: r.id,
     descricao: r.descricao,
+    fornecedorId: r.fornecedor_id ?? undefined,
     categoria: r.categoria ?? '',
     valor: Number(r.valor),
     vencimento: r.vencimento,
@@ -29,6 +31,7 @@ function toRow(c: ContaPagar): ContaPagarRow {
   return {
     id: c.id,
     descricao: c.descricao,
+    fornecedor_id: c.fornecedorId ?? null,
     categoria: c.categoria,
     valor: c.valor,
     vencimento: c.vencimento,

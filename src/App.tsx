@@ -10,6 +10,7 @@ import Servicos from './pages/Servicos'
 import ServicoDetalhe from './pages/ServicoDetalhe'
 import Agenda from './pages/Agenda'
 import Equipe from './pages/Equipe'
+import Fornecedores from './pages/Fornecedores'
 import Financeiro from './pages/Financeiro'
 import Logs from './pages/Logs'
 
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/servicos/:id" element={<ServicoDetalhe />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/equipe" element={<Equipe />} />
+          <Route path="/fornecedores" element={<Fornecedores />} />
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

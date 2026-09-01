@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
 import type { FormaPagamento, Maquininha, ParcelaServico, Servico } from '../types'
-import { PRAGAS, MAQUININHAS } from '../types'
+import { MAQUININHAS } from '../types'
 import { useClientes } from '../data/clienteStore'
 import { addServico } from '../data/servicoStore'
 import { useOperadores } from '../data/operadorStore'
 import { useTiposServico } from '../data/tipoServicoStore'
+import { useTiposPraga } from '../data/tipoPragaStore'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
 import ClienteCombobox from './ClienteCombobox'
@@ -29,6 +30,7 @@ const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string }[] = [
 export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   const clientes = useClientes()
   const tiposServico = useTiposServico()
+  const tiposPraga = useTiposPraga()
   const operadores = useOperadores()
   const { userEmail } = useAuth()
   const [clienteId, setClienteId] = useState(clienteIdInicial ?? '')
@@ -187,15 +189,15 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Pragas</label>
             <div className="grid grid-cols-2 gap-2">
-              {PRAGAS.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-lg px-2.5 py-1.5">
+              {tiposPraga.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-lg px-2.5 py-1.5">
                   <input
                     type="checkbox"
-                    checked={pragas.includes(p)}
-                    onChange={() => togglePraga(p)}
+                    checked={pragas.includes(p.nome)}
+                    onChange={() => togglePraga(p.nome)}
                     className="rounded border-slate-300 text-brand-600 focus:ring-brand-200"
                   />
-                  {p}
+                  {p.nome}
                 </label>
               ))}
             </div>
