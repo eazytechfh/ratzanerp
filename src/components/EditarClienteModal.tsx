@@ -35,6 +35,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
   const [segmento, setSegmento] = useState<SegmentoCliente | ''>(cliente.segmento ?? '')
   const [possuiPet, setPossuiPet] = useState(cliente.possuiPet)
   const [precisaEpi, setPrecisaEpi] = useState(cliente.precisaEpi)
+  const [observacoes, setObservacoes] = useState(cliente.observacoes ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   function validate() {
@@ -64,6 +65,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
       possuiPet,
       precisaEpi,
       segmento: segmento || undefined,
+      observacoes: observacoes.trim() || undefined,
     })
     registrarLog(userEmail ?? 'sistema', 'Cliente editado', nome.trim())
     onClose()
@@ -217,6 +219,17 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
               />
               Precisa de EPI para o atendimento
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Observações</label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={3}
+              placeholder="Anotações internas sobre o cliente..."
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm resize-none"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

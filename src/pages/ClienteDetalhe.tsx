@@ -210,6 +210,13 @@ export default function ClienteDetalhe() {
             )}
           </div>
         </div>
+
+        {cliente.observacoes && (
+          <div className="mt-6 pt-6 border-t border-slate-100">
+            <p className="text-xs font-medium text-slate-400 mb-2">Observações</p>
+            <p className="text-sm text-slate-700 whitespace-pre-wrap">{cliente.observacoes}</p>
+          </div>
+        )}
       </div>
 
       {alertasCliente.length > 0 && (

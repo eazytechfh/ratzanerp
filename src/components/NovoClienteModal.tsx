@@ -39,6 +39,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
   const [origem, setOrigem] = useState<OrigemServico>('Indicação')
   const [segmento, setSegmento] = useState<SegmentoCliente | ''>('')
   const [contratoFim, setContratoFim] = useState('')
+  const [observacoes, setObservacoes] = useState('')
   const [reforcoSemestral, setReforcoSemestral] = useState(false)
   const [dataReforco, setDataReforco] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -85,6 +86,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
       precisaEpi,
       origem,
       segmento: segmento || undefined,
+      observacoes: observacoes.trim() || undefined,
     }
 
     const created = await addCliente(novo)
@@ -351,6 +353,17 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
               />
               Precisa de EPI para o atendimento
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Observações</label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={3}
+              placeholder="Anotações internas sobre o cliente..."
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm resize-none"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
