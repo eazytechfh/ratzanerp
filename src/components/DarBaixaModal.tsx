@@ -10,6 +10,7 @@ import { useClientes } from '../data/clienteStore'
 import { addContaPagar } from '../data/contaPagarStore'
 import { TAXAS_MAQUININHA, MAQUININHAS } from '../types'
 import { componentToPdfBase64 } from '../lib/componentToPdf'
+import { montarEmailOsCertificado } from '../lib/emailTemplates'
 import { enviarEmailCliente } from '../data/emailClient'
 import OrdemServicoDoc from './documentos/OrdemServicoDoc'
 import CertificadoGarantiaDoc from './documentos/CertificadoGarantiaDoc'
@@ -32,23 +33,14 @@ async function enviarDocumentosPorEmail(servico: Servico, cliente: ReturnType<ty
   const osBase64 = await componentToPdfBase64(<OrdemServicoDoc servico={servico} cliente={cliente} />)
   anexos.push({ nome: `OS-${servico.clienteNome}.pdf`, base64: osBase64 })
 
-  if (servico.baixa?.emitirCertificado) {
-    const certBase64 = await componentToPdfBase64(<CertificadoGarantiaDoc servico={servico} cliente={cliente} />)
-    anexos.push({ nome: `Certificado-Garantia-${servico.clienteNome}.pdf`, base64: certBase64 })
-  }
-
-  const mensagemHtml = `
-    <p>Olá, ${cliente.nome}!</p>
-    <p>Segue em anexo a Ordem de Serviço${servico.baixa?.emitirCertificado ? ' e o Certificado de Garantia' : ''} referente ao serviço de <strong>${servico.tipoServico}</strong> realizado em ${new Date(servico.baixa?.dataServico ?? servico.dataAgendada).toLocaleDateString('pt-BR')}.</p>
-    <p>Qualquer dúvida, estamos à disposição.</p>
-    <p>Ratzan Controle de Pragas</p>
-  `
+  const certBase64 = await componentToPdfBase64(<CertificadoGarantiaDoc servico={servico} cliente={cliente} />)
+  anexos.push({ nome: `Certificado-Garantia-${servico.clienteNome}.pdf`, base64: certBase64 })
 
   return enviarEmailCliente({
     clienteEmail: cliente.email,
     clienteNome: cliente.nome,
     assunto: `Ordem de Serviço — ${servico.tipoServico} — Ratzan`,
-    mensagemHtml,
+    mensagemHtml: montarEmailOsCertificado(cliente.nome),
     anexos,
   })
 }
