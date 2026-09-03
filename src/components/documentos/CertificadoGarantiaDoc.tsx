@@ -73,7 +73,7 @@ export default function CertificadoGarantiaDoc({ servico, cliente }: Props) {
         </p>
       )}
 
-      <div className="pt-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 border-t border-slate-100">
+      <div className="pt-6 flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-6 border-t border-slate-100">
         <div className="text-xs text-slate-500 leading-relaxed">
           <p className="font-semibold text-ink-900 mb-1">Telefones de utilização pública e emergência:</p>
           <p>- Centro de informações toxicológicas: DDG 08006435252 (24h)</p>
