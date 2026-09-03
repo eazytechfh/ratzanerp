@@ -6,8 +6,13 @@ import { updateServico } from '../data/servicoStore'
 import { dispararWebhookConclusao } from '../data/webhooks'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
+import { useClientes } from '../data/clienteStore'
 import { addContaPagar } from '../data/contaPagarStore'
 import { TAXAS_MAQUININHA, MAQUININHAS } from '../types'
+import { componentToPdfBase64 } from '../lib/componentToPdf'
+import { enviarEmailCliente } from '../data/emailClient'
+import OrdemServicoDoc from './documentos/OrdemServicoDoc'
+import CertificadoGarantiaDoc from './documentos/CertificadoGarantiaDoc'
 import SignaturePad from './SignaturePad'
 
 interface Props {
@@ -19,8 +24,38 @@ function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10)
 }
 
+async function enviarDocumentosPorEmail(servico: Servico, cliente: ReturnType<typeof useClientes>[number]) {
+  if (!cliente?.email) return
+
+  const anexos: { nome: string; base64: string }[] = []
+
+  const osBase64 = await componentToPdfBase64(<OrdemServicoDoc servico={servico} cliente={cliente} />)
+  anexos.push({ nome: `OS-${servico.clienteNome}.pdf`, base64: osBase64 })
+
+  if (servico.baixa?.emitirCertificado) {
+    const certBase64 = await componentToPdfBase64(<CertificadoGarantiaDoc servico={servico} cliente={cliente} />)
+    anexos.push({ nome: `Certificado-Garantia-${servico.clienteNome}.pdf`, base64: certBase64 })
+  }
+
+  const mensagemHtml = `
+    <p>Olá, ${cliente.nome}!</p>
+    <p>Segue em anexo a Ordem de Serviço${servico.baixa?.emitirCertificado ? ' e o Certificado de Garantia' : ''} referente ao serviço de <strong>${servico.tipoServico}</strong> realizado em ${new Date(servico.baixa?.dataServico ?? servico.dataAgendada).toLocaleDateString('pt-BR')}.</p>
+    <p>Qualquer dúvida, estamos à disposição.</p>
+    <p>Ratzan Controle de Pragas</p>
+  `
+
+  return enviarEmailCliente({
+    clienteEmail: cliente.email,
+    clienteNome: cliente.nome,
+    assunto: `Ordem de Serviço — ${servico.tipoServico} — Ratzan`,
+    mensagemHtml,
+    anexos,
+  })
+}
+
 export default function DarBaixaModal({ servico, onClose }: Props) {
   const { userEmail } = useAuth()
+  const clientes = useClientes()
   const tiposPraga = useTiposPraga()
   const [dataServico, setDataServico] = useState(fmtDate(new Date()))
   const [garantiaAte, setGarantiaAte] = useState(servico.garantiaAte ?? '')
@@ -57,7 +92,7 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
     return Object.keys(errs).length === 0
   }
 
-  function handleConcluir(e: React.FormEvent) {
+  async function handleConcluir(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
 
@@ -109,7 +144,21 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
       registrarLog(userEmail ?? 'sistema', 'Taxa de cartão lançada', `${maquininhaLabel} — ${servico.clienteNome} — ${taxaValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`)
     }
 
+    const cliente = clientes.find((c) => c.id === servico.clienteId)
     onClose()
+
+    if (cliente?.email) {
+      enviarDocumentosPorEmail(atualizado, cliente)
+        .then((res) => {
+          if (res?.error) {
+            console.error('Falha ao enviar e-mail ao cliente:', res.error)
+            registrarLog(userEmail ?? 'sistema', 'Falha ao enviar e-mail ao cliente', `${servico.clienteNome}: ${res.error}`)
+          } else {
+            registrarLog(userEmail ?? 'sistema', 'OS/Certificado enviados por e-mail', `${servico.clienteNome} — ${cliente.email}`)
+          }
+        })
+        .catch((err) => console.error('Falha ao gerar/enviar documentos por e-mail:', err))
+    }
   }
 
   return (
