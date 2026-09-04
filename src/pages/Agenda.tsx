@@ -190,9 +190,15 @@ export default function Agenda() {
                       <p className="font-medium text-ink-900 truncate">{s.clienteNome}</p>
                       <p className="text-xs text-slate-400 truncate">{s.tipoServico} · {s.operador}</p>
                       {s.endereco && (
-                        <p className="text-xs text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.endereco)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-brand-600 hover:text-brand-700 hover:underline truncate flex items-center gap-1 mt-0.5"
+                        >
                           <MapPin size={11} className="shrink-0" /> {s.endereco}
-                        </p>
+                        </a>
                       )}
                     </div>
                     <ServicoStatusBadge status={s.status} />
