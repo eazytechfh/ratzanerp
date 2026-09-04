@@ -49,7 +49,7 @@ export interface Cliente {
 
 export type StatusServico = 'agendado' | 'em_andamento' | 'concluido' | 'cancelado'
 
-export type TipoAtendimento = 'novo' | 'reforco'
+export type TipoAtendimento = 'novo' | 'reforco' | 'visita'
 
 export type FormaPagamento =
   | 'pix'

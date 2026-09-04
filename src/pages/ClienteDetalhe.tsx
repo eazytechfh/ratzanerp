@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2,
+  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2, CalendarClock,
 } from 'lucide-react'
 import { useClientes, removeCliente } from '../data/clienteStore'
 import { useAuth } from '../context/AuthContext'
@@ -13,6 +13,7 @@ import { useAlertas, concluirAlerta } from '../data/alertaStore'
 import { ClienteStatusBadge, ServicoStatusBadge } from '../components/StatusBadge'
 import EditarClienteModal from '../components/EditarClienteModal'
 import NovoServicoModal from '../components/NovoServicoModal'
+import NovaVisitaModal from '../components/NovaVisitaModal'
 import NovoContratoModal from '../components/NovoContratoModal'
 import ContratoViewModal from '../components/ContratoViewModal'
 import IncluirAlertaModal from '../components/IncluirAlertaModal'
@@ -29,6 +30,7 @@ export default function ClienteDetalhe() {
   const cliente = clientes.find((c) => c.id === id)
   const [editOpen, setEditOpen] = useState(false)
   const [novoServicoOpen, setNovoServicoOpen] = useState(false)
+  const [novaVisitaOpen, setNovaVisitaOpen] = useState(false)
   const [novoContratoOpen, setNovoContratoOpen] = useState(false)
   const [novoAlertaOpen, setNovoAlertaOpen] = useState(false)
   const [contratoVisualizando, setContratoVisualizando] = useState<Contrato | null>(null)
@@ -94,6 +96,13 @@ export default function ClienteDetalhe() {
           >
             <Wrench size={16} />
             Criar serviço
+          </button>
+          <button
+            onClick={() => setNovaVisitaOpen(true)}
+            className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+          >
+            <CalendarClock size={16} />
+            Cadastrar visita
           </button>
           <button
             onClick={() => setNovoAlertaOpen(true)}
@@ -343,6 +352,9 @@ export default function ClienteDetalhe() {
       {editOpen && <EditarClienteModal cliente={cliente} onClose={() => setEditOpen(false)} />}
       {novoServicoOpen && (
         <NovoServicoModal clienteIdInicial={cliente.id} onClose={() => setNovoServicoOpen(false)} />
+      )}
+      {novaVisitaOpen && (
+        <NovaVisitaModal cliente={cliente} onClose={() => setNovaVisitaOpen(false)} />
       )}
       {novoContratoOpen && (
         <NovoContratoModal

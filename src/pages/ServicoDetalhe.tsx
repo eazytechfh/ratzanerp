@@ -102,7 +102,7 @@ export default function ServicoDetalhe() {
             <div><p className="text-xs text-slate-400">Endereço</p><p className="text-slate-700">{servico.endereco || '-'}</p></div>
             <div><p className="text-xs text-slate-400">Valor</p><p className="text-slate-700">{servico.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>
             <div><p className="text-xs text-slate-400">Forma de pagamento</p><p className="text-slate-700">{FORMA_LABEL[servico.formaPagamento]}{servico.parcelas ? ` · ${servico.parcelas}x` : ''}</p></div>
-            <div><p className="text-xs text-slate-400">Tipo de atendimento</p><p className="text-slate-700">{servico.tipoAtendimento === 'reforco' ? 'Reforço/Garantia' : 'Novo'}</p></div>
+            <div><p className="text-xs text-slate-400">Tipo de atendimento</p><p className="text-slate-700">{servico.tipoAtendimento === 'reforco' ? 'Reforço/Garantia' : servico.tipoAtendimento === 'visita' ? 'Visita' : 'Novo'}</p></div>
             <div className="sm:col-span-2"><p className="text-xs text-slate-400">Pragas</p><p className="text-slate-700">{servico.pragas.length > 0 ? servico.pragas.join(', ') : '-'}</p></div>
             {servico.observacoes && (
               <div className="sm:col-span-2"><p className="text-xs text-slate-400">Observações</p><p className="text-slate-700">{servico.observacoes}</p></div>
