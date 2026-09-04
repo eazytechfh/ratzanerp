@@ -13,6 +13,17 @@ import type { Servico } from '../types'
 
 type Visao = 'dia' | 'semana' | 'mes'
 
+const FORMA_PAGAMENTO_LABEL: Record<Servico['formaPagamento'], string> = {
+  pix: 'Pix',
+  transferencia: 'Transferência',
+  debito: 'Débito',
+  credito: 'Crédito',
+  boleto_pj: 'Boleto PJ',
+  garantia: 'Garantia',
+  dinheiro: 'Dinheiro',
+  incluso_no_contrato: 'Incluso no Contrato',
+}
+
 const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MONTH_LABELS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -189,6 +200,10 @@ export default function Agenda() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-ink-900 truncate">{s.clienteNome}</p>
                       <p className="text-xs text-slate-400 truncate">{s.tipoServico} · {s.operador}</p>
+                      <p className="text-xs font-medium text-brand-700 truncate">
+                        {FORMA_PAGAMENTO_LABEL[s.formaPagamento]}
+                        {s.parcelas ? ` · ${s.parcelas}x` : ''}
+                      </p>
                       {s.endereco && (
                         <a
                           href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.endereco)}`}
