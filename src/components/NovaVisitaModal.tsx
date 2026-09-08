@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { X, MapPin } from 'lucide-react'
 import type { Cliente, Servico } from '../types'
 import { addServico } from '../data/servicoStore'
@@ -15,6 +15,10 @@ export default function NovaVisitaModal({ cliente, onClose }: Props) {
   const operadores = useOperadores()
   const { userEmail } = useAuth()
   const [operador, setOperador] = useState(operadores[0]?.nome ?? '')
+
+  useEffect(() => {
+    if (!operador && operadores.length > 0) setOperador(operadores[0].nome)
+  }, [operadores, operador])
   const [dataAgendada, setDataAgendada] = useState('')
   const [horaAgendada, setHoraAgendada] = useState('09:00')
   const [motivo, setMotivo] = useState('')

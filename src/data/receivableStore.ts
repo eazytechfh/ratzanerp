@@ -120,7 +120,7 @@ export function useContasReceber(): ContaReceberItem[] {
 
   const hoje = new Date()
   clientes.forEach((c) => {
-    if (!c.recorrente || c.status === 'inativo') return
+    if (!c.recorrente || c.status === 'inativo' || !c.contratoFim) return
     const fim = new Date(c.contratoFim + 'T00:00:00')
     if (fim <= hoje) return
     const servicosCliente = servicos.filter((s) => s.clienteId === c.id && s.status === 'concluido')

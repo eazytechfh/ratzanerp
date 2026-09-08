@@ -21,6 +21,17 @@ interface Props {
   onClose: () => void
 }
 
+const FORMA_PAGAMENTO_LABEL: Record<Servico['formaPagamento'], string> = {
+  pix: 'Pix',
+  transferencia: 'Transferência',
+  debito: 'Débito',
+  credito: 'Crédito',
+  boleto_pj: 'Boleto PJ',
+  garantia: 'Garantia',
+  dinheiro: 'Dinheiro',
+  incluso_no_contrato: 'Incluso no Contrato',
+}
+
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10)
 }
@@ -168,6 +179,20 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
         </div>
 
         <form onSubmit={handleConcluir} className="p-6 space-y-5">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-emerald-700 font-medium">Valor a cobrar do cliente</p>
+              <p className="text-lg font-bold text-emerald-800">
+                {servico.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {servico.parcelas ? ` · ${servico.parcelas}x` : ''}
+              </p>
+            </div>
+            <p className="text-xs text-emerald-700 text-right">
+              {FORMA_PAGAMENTO_LABEL[servico.formaPagamento]}
+              {servico.maquininha ? ` · ${MAQUININHAS.find((m) => m.value === servico.maquininha)?.label}` : ''}
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Data do serviço</label>

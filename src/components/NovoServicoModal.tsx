@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import type { FormaPagamento, Maquininha, ParcelaServico, Servico } from '../types'
 import { MAQUININHAS } from '../types'
@@ -36,6 +36,14 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   const [clienteId, setClienteId] = useState(clienteIdInicial ?? '')
   const [tipoServico, setTipoServico] = useState(tiposServico[0]?.nome ?? '')
   const [operador, setOperador] = useState(operadores[0]?.nome ?? '')
+
+  useEffect(() => {
+    if (!tipoServico && tiposServico.length > 0) setTipoServico(tiposServico[0].nome)
+  }, [tiposServico, tipoServico])
+
+  useEffect(() => {
+    if (!operador && operadores.length > 0) setOperador(operadores[0].nome)
+  }, [operadores, operador])
   const [dataAgendada, setDataAgendada] = useState('')
   const [horaAgendada, setHoraAgendada] = useState('09:00')
   const [valor, setValor] = useState('')

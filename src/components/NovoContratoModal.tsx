@@ -21,7 +21,7 @@ export default function NovoContratoModal({ cliente, onClose, onCreated }: Props
   const [contratanteNome, setContratanteNome] = useState(cliente.nome)
   const [contratanteDocumento, setContratanteDocumento] = useState(cliente.cnpj || cliente.cpf || '')
   const [contratanteEndereco, setContratanteEndereco] = useState(cliente.enderecos[0]?.endereco ?? '')
-  const [contratanteEmail, setContratanteEmail] = useState(cliente.email)
+  const [contratanteEmail, setContratanteEmail] = useState(cliente.email ?? '')
   const [servicosAbrangidos, setServicosAbrangidos] = useState('')
   const [reajustePercentual, setReajustePercentual] = useState('0')
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>('Semestral')

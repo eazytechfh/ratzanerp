@@ -47,9 +47,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
   function validate() {
     const errs: Record<string, string> = {}
     if (!nome.trim()) errs.nome = 'Nome é obrigatório'
-    if (!email.trim()) errs.email = 'E-mail é obrigatório'
     if (!telefone.trim()) errs.telefone = 'Telefone é obrigatório'
-    if (!contratoFim) errs.contratoFim = 'Data de fim do contrato é obrigatória'
     if (reforcoSemestral && !dataReforco) errs.dataReforco = 'Informe a data do próximo reforço'
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -60,10 +58,13 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
     if (!validate()) return
 
     const hojeStr = fmtDate(new Date())
-    const fim = new Date(contratoFim)
     const hoje = new Date()
-    const diffDays = Math.floor((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
-    const status = diffDays < 0 ? 'vencido' : diffDays <= 30 ? 'vencendo' : 'ativo'
+    let status: Cliente['status'] = 'ativo'
+    if (contratoFim) {
+      const fim = new Date(contratoFim)
+      const diffDays = Math.floor((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+      status = diffDays < 0 ? 'vencido' : diffDays <= 30 ? 'vencendo' : 'ativo'
+    }
 
     const novo: Cliente = {
       id: `cli-${Date.now()}`,
@@ -71,7 +72,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
       nome: nome.trim(),
       cnpj: tipo === 'PJ' ? cnpj.trim() : undefined,
       cpf: cpf.trim() || undefined,
-      email: email.trim(),
+      email: email.trim() || undefined,
       telefone: telefone.trim(),
       bairro: bairro.trim(),
       contatoResponsavel: tipo === 'PJ' ? contatoResponsavel.trim() || undefined : undefined,
@@ -80,7 +81,7 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
       status,
       dataCadastro: hojeStr,
       contratoInicio: hojeStr,
-      contratoFim,
+      contratoFim: contratoFim || undefined,
       recorrente,
       possuiPet,
       precisaEpi,
@@ -187,7 +188,9 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">E-mail</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                E-mail <span className="text-slate-400 font-normal">(opcional)</span>
+              </label>
               <input
                 type="email"
                 value={email}
@@ -284,7 +287,9 @@ export default function NovoClienteModal({ onClose, onCreated }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Fim do contrato</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Fim do contrato <span className="text-slate-400 font-normal">(opcional)</span>
+              </label>
               <input
                 type="date"
                 value={contratoFim}

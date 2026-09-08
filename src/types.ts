@@ -29,7 +29,7 @@ export interface Cliente {
   nome: string
   cpf?: string
   cnpj?: string
-  email: string
+  email?: string
   telefone: string
   bairro: string
   categoriaId?: string
@@ -37,7 +37,7 @@ export interface Cliente {
   status: StatusCliente
   dataCadastro: string
   contratoInicio: string
-  contratoFim: string
+  contratoFim?: string
   recorrente: boolean
   possuiPet: boolean
   precisaEpi: boolean

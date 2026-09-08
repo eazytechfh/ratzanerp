@@ -7,7 +7,7 @@ interface ClienteRow {
   nome: string
   cpf: string | null
   cnpj: string | null
-  email: string
+  email: string | null
   telefone: string
   bairro: string
   categoria_id: string | null
@@ -15,7 +15,7 @@ interface ClienteRow {
   status: string
   data_cadastro: string
   contrato_inicio: string
-  contrato_fim: string
+  contrato_fim: string | null
   recorrente: boolean
   possui_pet: boolean
   precisa_epi: boolean
@@ -32,7 +32,7 @@ function fromRow(r: ClienteRow): Cliente {
     nome: r.nome,
     cpf: r.cpf ?? undefined,
     cnpj: r.cnpj ?? undefined,
-    email: r.email,
+    email: r.email ?? undefined,
     telefone: r.telefone,
     bairro: r.bairro,
     categoriaId: r.categoria_id ?? undefined,
@@ -40,7 +40,7 @@ function fromRow(r: ClienteRow): Cliente {
     status: r.status as Cliente['status'],
     dataCadastro: r.data_cadastro,
     contratoInicio: r.contrato_inicio,
-    contratoFim: r.contrato_fim,
+    contratoFim: r.contrato_fim ?? undefined,
     recorrente: r.recorrente,
     possuiPet: r.possui_pet,
     precisaEpi: r.precisa_epi,
@@ -58,7 +58,7 @@ function toRow(c: Cliente): ClienteRow {
     nome: c.nome,
     cpf: c.cpf ?? null,
     cnpj: c.cnpj ?? null,
-    email: c.email,
+    email: c.email ?? null,
     telefone: c.telefone,
     bairro: c.bairro,
     categoria_id: c.categoriaId ?? null,
@@ -66,7 +66,7 @@ function toRow(c: Cliente): ClienteRow {
     status: c.status,
     data_cadastro: c.dataCadastro,
     contrato_inicio: c.contratoInicio,
-    contrato_fim: c.contratoFim,
+    contrato_fim: c.contratoFim ?? null,
     recorrente: c.recorrente,
     possui_pet: c.possuiPet,
     precisa_epi: c.precisaEpi,

@@ -49,7 +49,7 @@ export default function Clientes() {
         c.nome.toLowerCase().includes(q) ||
         (c.cnpj ?? '').toLowerCase().includes(q) ||
         (c.cpf ?? '').toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q)
+        (c.email ?? '').toLowerCase().includes(q)
       return matchStatus && matchSegmento && matchBusca
     })
   }, [clientes, filtro, filtroSegmento, busca])
@@ -174,10 +174,10 @@ export default function Clientes() {
                   <td className="px-4 py-3 hidden md:table-cell text-slate-600">{c.cnpj || c.cpf || '-'}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <p className="text-slate-600">{c.telefone}</p>
-                    <p className="text-xs text-slate-400">{c.email}</p>
+                    <p className="text-xs text-slate-400">{c.email || '-'}</p>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-slate-600">
-                    {new Date(c.contratoFim + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {c.contratoFim ? new Date(c.contratoFim + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     {getCategoriaById(c.categoriaId) && (

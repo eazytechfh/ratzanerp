@@ -24,13 +24,14 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
   const categorias = useCategorias()
   const { userEmail } = useAuth()
   const [nome, setNome] = useState(cliente.nome)
+  const [email, setEmail] = useState(cliente.email ?? '')
   const [telefone, setTelefone] = useState(cliente.telefone)
   const [bairro, setBairro] = useState(cliente.bairro)
   const [contatoResponsavel, setContatoResponsavel] = useState(cliente.contatoResponsavel ?? '')
   const [categoriaId, setCategoriaId] = useState(cliente.categoriaId ?? '')
   const [status, setStatus] = useState<StatusCliente>(cliente.status)
   const [contratoInicio, setContratoInicio] = useState(cliente.contratoInicio)
-  const [contratoFim, setContratoFim] = useState(cliente.contratoFim)
+  const [contratoFim, setContratoFim] = useState(cliente.contratoFim ?? '')
   const [enderecos, setEnderecos] = useState<Endereco[]>(cliente.enderecos)
   const [segmento, setSegmento] = useState<SegmentoCliente | ''>(cliente.segmento ?? '')
   const [possuiPet, setPossuiPet] = useState(cliente.possuiPet)
@@ -43,7 +44,6 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
     if (!nome.trim()) errs.nome = 'Nome é obrigatório'
     if (!telefone.trim()) errs.telefone = 'Telefone é obrigatório'
     if (!contratoInicio) errs.contratoInicio = 'Informe o início do contrato'
-    if (!contratoFim) errs.contratoFim = 'Informe o fim do contrato'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -54,13 +54,14 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
 
     updateCliente(cliente.id, {
       nome: nome.trim(),
+      email: email.trim() || undefined,
       telefone: telefone.trim(),
       bairro: bairro.trim(),
       contatoResponsavel: cliente.tipo === 'PJ' ? contatoResponsavel.trim() || undefined : undefined,
       categoriaId: categoriaId || undefined,
       status,
       contratoInicio,
-      contratoFim,
+      contratoFim: contratoFim || undefined,
       enderecos,
       possuiPet,
       precisaEpi,
@@ -95,6 +96,17 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                E-mail <span className="text-slate-400 font-normal">(opcional)</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Telefone</label>
               <input
                 value={telefone}
@@ -103,6 +115,9 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
               />
               {errors.telefone && <p className="text-xs text-rose-600 mt-1">{errors.telefone}</p>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
               <select
@@ -129,7 +144,9 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
               {errors.contratoInicio && <p className="text-xs text-rose-600 mt-1">{errors.contratoInicio}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Fim do contrato</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Fim do contrato <span className="text-slate-400 font-normal">(opcional)</span>
+              </label>
               <input
                 type="date"
                 value={contratoFim}

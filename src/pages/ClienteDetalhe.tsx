@@ -192,13 +192,13 @@ export default function ClienteDetalhe() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-          <InfoItem icon={Mail} label="E-mail" value={cliente.email} />
+          <InfoItem icon={Mail} label="E-mail" value={cliente.email || '-'} />
           <InfoItem icon={Phone} label="Telefone" value={cliente.telefone} />
           <InfoItem icon={MapPin} label="Bairro" value={cliente.bairro || '-'} />
           <InfoItem
             icon={Calendar}
             label="Contrato"
-            value={`${new Date(cliente.contratoInicio + 'T00:00:00').toLocaleDateString('pt-BR')} até ${new Date(cliente.contratoFim + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+            value={`${new Date(cliente.contratoInicio + 'T00:00:00').toLocaleDateString('pt-BR')} até ${cliente.contratoFim ? new Date(cliente.contratoFim + 'T00:00:00').toLocaleDateString('pt-BR') : 'sem data definida'}`}
           />
         </div>
 
