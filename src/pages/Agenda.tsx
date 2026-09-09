@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil } from 'lucide-react'
 import { useServicos, updateServico, removeServico } from '../data/servicoStore'
+import { useClientes } from '../data/clienteStore'
 import { useOperadores } from '../data/operadorStore'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
@@ -49,6 +50,7 @@ function addDays(date: Date, days: number) {
 
 export default function Agenda() {
   const servicosTodos = useServicos()
+  const clientes = useClientes()
   const operadores = useOperadores()
   const { userEmail, perfil } = useAuth()
   const [visao, setVisao] = useState<Visao>('semana')
@@ -129,6 +131,11 @@ export default function Agenda() {
 
   const podeExcluir = perfil?.role !== 'operador'
 
+  function enderecoDoServico(s: Servico) {
+    if (s.endereco) return s.endereco
+    return clientes.find((c) => c.id === s.clienteId)?.enderecos[0]?.endereco ?? ''
+  }
+
   function renderAcoes(s: Servico) {
     if (s.status !== 'agendado' && s.status !== 'em_andamento') return null
     return (
@@ -204,15 +211,15 @@ export default function Agenda() {
                         {FORMA_PAGAMENTO_LABEL[s.formaPagamento]}
                         {s.parcelas ? ` · ${s.parcelas}x` : ''}
                       </p>
-                      {s.endereco && (
+                      {enderecoDoServico(s) && (
                         <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.endereco)}`}
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(enderecoDoServico(s))}`}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="text-xs text-brand-600 hover:text-brand-700 hover:underline truncate flex items-center gap-1 mt-0.5"
                         >
-                          <MapPin size={11} className="shrink-0" /> {s.endereco}
+                          <MapPin size={11} className="shrink-0" /> {enderecoDoServico(s)}
                         </a>
                       )}
                     </div>
