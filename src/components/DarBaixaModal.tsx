@@ -44,14 +44,17 @@ async function enviarDocumentosPorEmail(servico: Servico, cliente: ReturnType<ty
   const osBase64 = await componentToPdfBase64(<OrdemServicoDoc servico={servico} cliente={cliente} />)
   anexos.push({ nome: `OS-${servico.clienteNome}.pdf`, base64: osBase64 })
 
-  const certBase64 = await componentToPdfBase64(<CertificadoGarantiaDoc servico={servico} cliente={cliente} />)
-  anexos.push({ nome: `Certificado-Garantia-${servico.clienteNome}.pdf`, base64: certBase64 })
+  const comCertificado = servico.baixa?.emitirCertificado !== false
+  if (comCertificado) {
+    const certBase64 = await componentToPdfBase64(<CertificadoGarantiaDoc servico={servico} cliente={cliente} />)
+    anexos.push({ nome: `Certificado-Garantia-${servico.clienteNome}.pdf`, base64: certBase64 })
+  }
 
   return enviarEmailCliente({
     clienteEmail: cliente.email,
     clienteNome: cliente.nome,
     assunto: `Ordem de Serviço — ${servico.tipoServico} — Ratzan`,
-    mensagemHtml: montarEmailOsCertificado(cliente.nome),
+    mensagemHtml: montarEmailOsCertificado(cliente.nome, comCertificado),
     anexos,
   })
 }
@@ -65,7 +68,8 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
   const [horaInicio, setHoraInicio] = useState(servico.horaAgendada)
   const [horaFim, setHoraFim] = useState('')
   const [pragas, setPragas] = useState<string[]>(servico.pragas ?? [])
-  const [aplicacao, setAplicacao] = useState<TipoAplicacao>('aplicacao')
+  const ehReforco = servico.tipoAtendimento === 'reforco'
+  const [aplicacao, setAplicacao] = useState<TipoAplicacao>(ehReforco ? 'reforco' : 'aplicacao')
   const [cipergranMl, setCipergranMl] = useState('')
   const [ddvpMl, setDdvpMl] = useState('')
   const [cropnilMl, setCropnilMl] = useState('')
@@ -73,10 +77,17 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
   const [raticidaQtd, setRaticidaQtd] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [assinaturaCliente, setAssinaturaCliente] = useState('')
-  const [emitirCertificado, setEmitirCertificado] = useState(true)
+  const [emitirCertificado, setEmitirCertificado] = useState(!ehReforco)
   const [recusouAplicacaoVeneno, setRecusouAplicacaoVeneno] = useState(false)
   const [assinaturaTermoCiencia, setAssinaturaTermoCiencia] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Reforço nunca emite certificado de garantia: desmarca ao escolher reforço
+  // (e trava o checkbox) para o operador não emitir por engano.
+  function handleAplicacaoChange(a: TipoAplicacao) {
+    setAplicacao(a)
+    setEmitirCertificado(a !== 'reforco')
+  }
 
   function togglePraga(p: string) {
     setPragas((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]))
@@ -262,7 +273,7 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
                 <button
                   key={a}
                   type="button"
-                  onClick={() => setAplicacao(a)}
+                  onClick={() => handleAplicacaoChange(a)}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition ${
                     aplicacao === a
                       ? 'bg-brand-600 border-brand-600 text-white'
@@ -342,15 +353,21 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
             )}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={emitirCertificado}
-              onChange={(e) => setEmitirCertificado(e.target.checked)}
-              className="rounded border-slate-300 text-brand-600 focus:ring-brand-200"
-            />
-            Emitir certificado de garantia
-          </label>
+          <div>
+            <label className={`flex items-center gap-2 text-sm ${aplicacao === 'reforco' ? 'text-slate-400' : 'text-slate-700'}`}>
+              <input
+                type="checkbox"
+                checked={emitirCertificado}
+                disabled={aplicacao === 'reforco'}
+                onChange={(e) => setEmitirCertificado(e.target.checked)}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-200 disabled:opacity-50"
+              />
+              Emitir certificado de garantia
+            </label>
+            {aplicacao === 'reforco' && (
+              <p className="text-xs text-slate-500 mt-1 ml-6">Reforço não gera certificado de garantia.</p>
+            )}
+          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button

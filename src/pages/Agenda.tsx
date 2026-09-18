@@ -139,43 +139,43 @@ export default function Agenda() {
   function renderAcoes(s: Servico) {
     if (s.status !== 'agendado' && s.status !== 'em_andamento') return null
     return (
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1.5 sm:flex-wrap">
         {s.status === 'agendado' && (
           <button
             onClick={() => handleIniciar(s)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
           >
             <PlayCircle size={13} /> Iniciar serviço
           </button>
         )}
         <button
           onClick={() => { setSelecionado(s); setModalBaixa(true) }}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
         >
           <CheckCircle2 size={13} /> Dar baixa
         </button>
         <button
           onClick={() => { setSelecionado(s); setModalReagendar(true) }}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200"
         >
           <CalendarClock size={13} /> Reagendar
         </button>
         <button
           onClick={() => { setSelecionado(s); setModalEditar(true) }}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
         >
           <Pencil size={13} /> Editar
         </button>
         <button
           onClick={() => handleCancelar(s)}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
         >
           <XCircle size={13} /> Cancelar
         </button>
         {podeExcluir && (
           <button
             onClick={() => handleExcluir(s)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
           >
             <Trash2 size={13} /> Excluir
           </button>
@@ -313,7 +313,7 @@ export default function Agenda() {
           <h1 className="text-2xl font-bold text-ink-900">Agenda</h1>
           <p className="text-slate-500 text-sm mt-0.5 capitalize">{tituloPeriodo}</p>
         </div>
-        <div className="flex items-center gap-2 self-start">
+        <div className="flex flex-wrap items-center gap-2 self-start">
           {googleConectado === false && (
             <button
               onClick={() => perfil && conectarGoogleCalendar(perfil.id)}

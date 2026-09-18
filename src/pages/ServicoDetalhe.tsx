@@ -39,11 +39,12 @@ export default function ServicoDetalhe() {
   }
 
   const documentosLiberados = servico.status === 'concluido' && !!servico.baixa
+  const certificadoLiberado = documentosLiberados && servico.baixa?.emitirCertificado !== false
 
   const ABAS: { key: Aba; label: string; icon: React.ElementType; bloqueada?: boolean }[] = [
     { key: 'detalhes', label: 'Detalhes', icon: Info },
     { key: 'os', label: 'Ordem de Serviço', icon: FileText, bloqueada: !documentosLiberados },
-    { key: 'certificado', label: 'Certificado de Garantia', icon: ShieldCheck, bloqueada: !documentosLiberados },
+    { key: 'certificado', label: 'Certificado de Garantia', icon: ShieldCheck, bloqueada: !certificadoLiberado },
     { key: 'aviso', label: 'Gerar arte do aviso', icon: Megaphone },
   ]
 
@@ -135,6 +136,18 @@ export default function ServicoDetalhe() {
         </div>
       )}
 
+      {aba === 'certificado' && documentosLiberados && !certificadoLiberado && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card p-10 max-w-3xl text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
+            <Lock size={24} />
+          </div>
+          <h2 className="text-lg font-semibold text-ink-900 mb-1.5">Certificado não emitido</h2>
+          <p className="text-sm text-slate-500 max-w-md mx-auto">
+            Este serviço foi concluído sem emissão de certificado de garantia (ex.: reforço).
+          </p>
+        </div>
+      )}
+
       {(aba === 'os' || aba === 'certificado') && !documentosLiberados && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-card p-10 max-w-3xl text-center">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
@@ -149,7 +162,7 @@ export default function ServicoDetalhe() {
       )}
 
       {aba === 'os' && documentosLiberados && <OrdemServicoDoc servico={servico} cliente={cliente} />}
-      {aba === 'certificado' && documentosLiberados && <CertificadoGarantiaDoc servico={servico} cliente={cliente} />}
+      {aba === 'certificado' && certificadoLiberado && <CertificadoGarantiaDoc servico={servico} cliente={cliente} />}
       {aba === 'aviso' && <AvisoDoc servico={servico} />}
     </div>
   )

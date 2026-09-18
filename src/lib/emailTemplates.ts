@@ -2,8 +2,11 @@
 // HTML com estilos inline e layout em tabela — necessário para renderizar
 // consistente nos clientes de e-mail (Gmail, Outlook etc.), que ignoram <style>.
 
-export function montarEmailOsCertificado(nome: string): string {
+export function montarEmailOsCertificado(nome: string, comCertificado = true): string {
   const primeiroNome = nome.trim().split(' ')[0] || nome
+  const anexosTexto = comCertificado
+    ? 'a nossa <strong>Ordem de Serviço</strong> e o <strong>Certificado de Garantia</strong>'
+    : 'a nossa <strong>Ordem de Serviço</strong>'
 
   return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
@@ -20,7 +23,7 @@ export function montarEmailOsCertificado(nome: string): string {
           <td style="padding:32px;">
             <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#062233;">Olá, <strong>${primeiroNome}</strong>,</p>
             <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#062233;">
-              Segue em anexo a nossa <strong>Ordem de Serviço</strong> e o <strong>Certificado de Garantia</strong>.
+              Segue em anexo ${anexosTexto}.
               Qualquer dúvida, favor retornar para o e-mail
               <a href="mailto:contato@ratzan.com.br" style="color:#ab171a;text-decoration:none;">contato@ratzan.com.br</a>.
             </p>

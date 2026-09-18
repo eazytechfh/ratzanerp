@@ -162,7 +162,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     onClose()
   }
 
-  const maxParcelas = formaPagamento === 'credito' ? 3 : formaPagamento === 'boleto_pj' ? 12 : 1
+  const maxParcelas = formaPagamento === 'credito' || formaPagamento === 'boleto_pj' ? 12 : 1
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

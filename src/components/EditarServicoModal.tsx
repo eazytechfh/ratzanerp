@@ -53,7 +53,7 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
   }
 
   const valorDispensado = formaPagamento === 'garantia' || formaPagamento === 'incluso_no_contrato'
-  const maxParcelas = formaPagamento === 'credito' ? 3 : formaPagamento === 'boleto_pj' ? 12 : 1
+  const maxParcelas = formaPagamento === 'credito' || formaPagamento === 'boleto_pj' ? 12 : 1
 
   function validate() {
     const errs: Record<string, string> = {}
