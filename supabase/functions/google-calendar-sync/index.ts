@@ -22,6 +22,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+}
+
 interface ServicoSync {
   id: string
   tipoServico: string
@@ -31,6 +35,8 @@ interface ServicoSync {
   horaAgendada: string
   status: string
 }
+
+class ConexaoGoogleExpirada extends Error {}
 
 async function obterAccessToken(
   supabase: ReturnType<typeof createClient>,
@@ -49,8 +55,12 @@ async function obterAccessToken(
     return token.access_token as string
   }
 
-  const clientId = Deno.env.get('GOOGLE_CLIENT_ID')!
-  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')!
+  const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
+  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
+  if (!clientId || !clientSecret) {
+    throw new Error('GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET não configurados nos secrets da function.')
+  }
+
   const resp = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -61,10 +71,16 @@ async function obterAccessToken(
       grant_type: 'refresh_token',
     }),
   })
-  const data = await resp.json()
+  const data = await resp.json().catch(() => ({}))
   if (!resp.ok) {
     console.error('Erro renovando access_token:', data)
-    return null
+    if (data?.error === 'invalid_grant') {
+      // Refresh token revogado/expirado (ex.: app do Google em modo "Testing" expira em 7 dias).
+      // Remove a conexão inválida para o app voltar a oferecer "Conectar Google Calendar".
+      await supabase.from('google_calendar_tokens').delete().eq('perfil_id', perfilId)
+      throw new ConexaoGoogleExpirada()
+    }
+    throw new Error(`Falha ao renovar acesso no Google: ${data?.error_description ?? data?.error ?? resp.status}`)
   }
 
   const novoExpiraEm = new Date(Date.now() + (data.expires_in ?? 3600) * 1000).toISOString()
@@ -78,7 +94,11 @@ async function obterAccessToken(
 
 function eventoBody(s: ServicoSync) {
   const inicio = `${s.dataAgendada}T${s.horaAgendada}:00`
-  const fim = new Date(new Date(inicio).getTime() + 60 * 60 * 1000).toISOString().slice(0, 19)
+  const inicioMs = new Date(inicio).getTime()
+  if (!s.dataAgendada || !s.horaAgendada || Number.isNaN(inicioMs)) {
+    throw new Error(`data/hora inválida (${s.dataAgendada} ${s.horaAgendada})`)
+  }
+  const fim = new Date(inicioMs + 60 * 60 * 1000).toISOString().slice(0, 19)
   return {
     summary: `${s.tipoServico} — ${s.clienteNome}`,
     location: s.endereco || undefined,
@@ -88,12 +108,19 @@ function eventoBody(s: ServicoSync) {
   }
 }
 
+// Monta uma descrição curta do erro devolvido pelo Google (ex.: "403: Calendar API has not been used…").
+async function erroDoGoogle(resp: Response): Promise<string> {
+  const corpo = await resp.json().catch(() => null)
+  const motivo = corpo?.error?.message
+  return motivo ? `${resp.status}: ${motivo}` : String(resp.status)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const authHeader = req.headers.get('authorization')
-    if (!authHeader) return new Response(JSON.stringify({ error: 'Não autenticado.' }), { status: 401, headers: corsHeaders })
+    if (!authHeader) return json({ error: 'Não autenticado.' }, 401)
 
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -102,7 +129,7 @@ Deno.serve(async (req) => {
     )
     const { data: userData, error: userError } = await supabaseAuth.auth.getUser()
     if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: 'Sessão inválida.' }), { status: 401, headers: corsHeaders })
+      return json({ error: 'Sessão inválida.' }, 401)
     }
     const perfilId = userData.user.id
 
@@ -111,9 +138,17 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    const accessToken = await obterAccessToken(supabase, perfilId)
+    let accessToken: string | null
+    try {
+      accessToken = await obterAccessToken(supabase, perfilId)
+    } catch (e) {
+      if (e instanceof ConexaoGoogleExpirada) {
+        return json({ error: 'A conexão com o Google expirou ou foi revogada. Clique em "Conectar Google Calendar" para conectar de novo.' }, 400)
+      }
+      throw e
+    }
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: 'Google Calendar não conectado.' }), { status: 400, headers: corsHeaders })
+      return json({ error: 'Google Calendar não conectado.' }, 400)
     }
 
     const { data: tokenRow } = await supabase
@@ -125,7 +160,7 @@ Deno.serve(async (req) => {
 
     const { servicos } = (await req.json()) as { servicos: ServicoSync[] }
     if (!Array.isArray(servicos)) {
-      return new Response(JSON.stringify({ error: 'Lista de serviços inválida.' }), { status: 400, headers: corsHeaders })
+      return json({ error: 'Lista de serviços inválida.' }, 400)
     }
 
     const gcalHeaders = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
@@ -137,58 +172,65 @@ Deno.serve(async (req) => {
     const erros: string[] = []
 
     for (const s of servicos) {
-      const { data: mapeado } = await supabase
-        .from('google_calendar_eventos')
-        .select('google_event_id')
-        .eq('servico_id', s.id)
-        .maybeSingle()
+      // Um serviço com problema não pode derrubar a sincronização dos demais.
+      try {
+        const { data: mapeado } = await supabase
+          .from('google_calendar_eventos')
+          .select('google_event_id')
+          .eq('servico_id', s.id)
+          .maybeSingle()
 
-      if (s.status === 'cancelado') {
+        if (s.status === 'cancelado') {
+          if (mapeado?.google_event_id) {
+            const resp = await fetch(`${base}/${mapeado.google_event_id}`, { method: 'DELETE', headers: gcalHeaders })
+            if (resp.ok || resp.status === 404 || resp.status === 410) {
+              await supabase.from('google_calendar_eventos').delete().eq('servico_id', s.id)
+              cancelados++
+            } else {
+              erros.push(`${s.id}: falha ao cancelar evento (${await erroDoGoogle(resp)})`)
+            }
+          }
+          continue
+        }
+
         if (mapeado?.google_event_id) {
-          const resp = await fetch(`${base}/${mapeado.google_event_id}`, { method: 'DELETE', headers: gcalHeaders })
-          if (resp.ok || resp.status === 404 || resp.status === 410) {
-            await supabase.from('google_calendar_eventos').delete().eq('servico_id', s.id)
-            cancelados++
+          const resp = await fetch(`${base}/${mapeado.google_event_id}`, {
+            method: 'PATCH',
+            headers: gcalHeaders,
+            body: JSON.stringify(eventoBody(s)),
+          })
+          if (resp.ok) {
+            atualizados++
           } else {
-            erros.push(`${s.id}: falha ao cancelar evento (${resp.status})`)
+            erros.push(`${s.id}: falha ao atualizar evento (${await erroDoGoogle(resp)})`)
+          }
+        } else {
+          const resp = await fetch(base, { method: 'POST', headers: gcalHeaders, body: JSON.stringify(eventoBody(s)) })
+          if (resp.ok) {
+            const data = await resp.json()
+            if (data.id) {
+              await supabase.from('google_calendar_eventos').upsert({
+                servico_id: s.id,
+                perfil_id: perfilId,
+                google_event_id: data.id,
+                atualizado_em: new Date().toISOString(),
+              })
+              criados++
+            } else {
+              erros.push(`${s.id}: o Google não retornou o id do evento`)
+            }
+          } else {
+            erros.push(`${s.id}: falha ao criar evento (${await erroDoGoogle(resp)})`)
           }
         }
-        continue
-      }
-
-      if (mapeado?.google_event_id) {
-        const resp = await fetch(`${base}/${mapeado.google_event_id}`, {
-          method: 'PATCH',
-          headers: gcalHeaders,
-          body: JSON.stringify(eventoBody(s)),
-        })
-        if (resp.ok) {
-          atualizados++
-        } else {
-          erros.push(`${s.id}: falha ao atualizar evento (${resp.status})`)
-        }
-      } else {
-        const resp = await fetch(base, { method: 'POST', headers: gcalHeaders, body: JSON.stringify(eventoBody(s)) })
-        const data = await resp.json()
-        if (resp.ok && data.id) {
-          await supabase.from('google_calendar_eventos').upsert({
-            servico_id: s.id,
-            perfil_id: perfilId,
-            google_event_id: data.id,
-            atualizado_em: new Date().toISOString(),
-          })
-          criados++
-        } else {
-          erros.push(`${s.id}: falha ao criar evento (${resp.status})`)
-        }
+      } catch (e) {
+        erros.push(`${s.id}: ${e instanceof Error ? e.message : 'erro inesperado'}`)
       }
     }
 
-    return new Response(JSON.stringify({ criados, atualizados, cancelados, erros }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return json({ criados, atualizados, cancelados, erros })
   } catch (e) {
     console.error(e)
-    return new Response(JSON.stringify({ error: 'Erro inesperado na sincronização.' }), { status: 500, headers: corsHeaders })
+    return json({ error: e instanceof Error ? `Erro na sincronização: ${e.message}` : 'Erro inesperado na sincronização.' }, 500)
   }
 })

@@ -1,6 +1,9 @@
 import React from 'react'
 import { Bug } from 'lucide-react'
+import ratzanLogo from '../../assets/ratzan-logo.webp'
 
+// OSHeader ainda usa o ícone genérico (não a logo nova): o layout da Ordem de Serviço
+// está em aprovação com o cliente, então segue como está em produção até aprovar.
 export function OSHeader({ titulo }: { titulo: string }) {
   return (
     <>
@@ -21,11 +24,10 @@ export function CertificadoHeader() {
   return (
     <>
       <div className="bg-brand-600 rounded-lg px-6 py-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0">
-            <Bug size={24} className="text-brand-600" />
+        <div className="flex items-center mb-3">
+          <div className="bg-white rounded-lg px-3 py-2 inline-flex items-center">
+            <img src={ratzanLogo} alt="Ratzan Controle de Pragas" className="h-9 w-auto" />
           </div>
-          <span className="text-white text-2xl font-extrabold tracking-tight">RATZAN</span>
         </div>
         <div className="flex items-start justify-between gap-3 text-white text-[10px] leading-relaxed">
           <div>

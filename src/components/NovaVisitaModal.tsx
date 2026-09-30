@@ -48,6 +48,8 @@ export default function NovaVisitaModal({ cliente, onClose }: Props) {
       horaAgendada,
       status: 'agendado',
       endereco,
+      enderecoLat: cliente.enderecos[0]?.lat,
+      enderecoLng: cliente.enderecos[0]?.lng,
       observacoes: motivo || undefined,
       valor: 0,
       tipoAtendimento: 'visita',

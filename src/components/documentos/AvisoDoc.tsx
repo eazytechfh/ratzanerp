@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bug } from 'lucide-react'
+import ratzanLogo from '../../assets/ratzan-logo.webp'
 import type { Servico } from '../../types'
 
 interface Props {
@@ -90,11 +90,8 @@ export default function AvisoDoc({ servico }: Props) {
           <p>☏ 21 98117-4376</p>
           <p>www.ratzan.com.br</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-            <Bug size={20} className="text-brand-600" />
-          </div>
-          <span className="text-white text-2xl font-extrabold tracking-tight">RATZAN</span>
+        <div className="bg-white rounded-lg px-2.5 py-1.5 inline-flex items-center">
+          <img src={ratzanLogo} alt="Ratzan" className="h-7 w-auto" />
         </div>
       </div>
     </div>

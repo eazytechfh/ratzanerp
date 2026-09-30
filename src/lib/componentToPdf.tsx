@@ -27,7 +27,13 @@ export async function componentToPdfBase64(node: React.ReactElement): Promise<st
 
     const widthPx = canvas.width / 2
     const heightPx = canvas.height / 2
-    const pdf = new jsPDF({ unit: 'px', format: [widthPx, heightPx] })
+    // Sem "orientation" explícita, o jsPDF assume retrato por padrão e, quando o
+    // conteúdo é mais largo que alto (ex: a OS compacta em 1 página), inverte
+    // largura/altura internamente — a página sai com a proporção errada e a imagem
+    // (desenhada com as dimensões originais) fica cortada. Documentos mais altos que
+    // largos (Certificado, versões antigas da OS) não expunham o problema.
+    const orientation = widthPx > heightPx ? 'landscape' : 'portrait'
+    const pdf = new jsPDF({ orientation, unit: 'px', format: [widthPx, heightPx] })
     pdf.addImage(imgData, 'JPEG', 0, 0, widthPx, heightPx)
 
     const dataUri = pdf.output('datauristring') as string

@@ -61,6 +61,29 @@ interface ResultadoSync {
   error?: string
 }
 
+// O supabase-js troca qualquer resposta não-2xx da Edge Function por uma mensagem genérica
+// ("Edge Function returned a non-2xx status code"). O motivo real vem no corpo da resposta
+// (error.context), então lemos de lá para mostrar algo útil ao usuário.
+async function mensagemDeErro(error: unknown): Promise<string> {
+  const ctx = (error as { context?: unknown } | null)?.context
+  if (ctx instanceof Response) {
+    try {
+      const texto = await ctx.clone().text()
+      try {
+        const corpo = JSON.parse(texto)
+        const motivo = corpo?.error ?? corpo?.message
+        if (motivo) return `${motivo} (HTTP ${ctx.status})`
+      } catch {
+        // corpo não é JSON
+      }
+      return texto ? `${texto.slice(0, 200)} (HTTP ${ctx.status})` : `HTTP ${ctx.status}`
+    } catch {
+      return `HTTP ${ctx.status}`
+    }
+  }
+  return error instanceof Error ? error.message : 'Erro desconhecido'
+}
+
 export async function sincronizarGoogleCalendar(servicos: Servico[]): Promise<ResultadoSync> {
   const payload = servicos.map((s) => ({
     id: s.id,
@@ -75,6 +98,6 @@ export async function sincronizarGoogleCalendar(servicos: Servico[]): Promise<Re
   const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
     body: { servicos: payload },
   })
-  if (error) return { error: error.message }
+  if (error) return { error: await mensagemDeErro(error) }
   return data as ResultadoSync
 }

@@ -26,6 +26,10 @@ body {
 /* Impressão: mostra só o documento (OS, certificado, contrato, aviso),
    escondendo o menu lateral, cabeçalho e qualquer elemento marcado como print:hidden. */
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
   aside,
   header {
     display: none !important;

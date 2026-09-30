@@ -81,7 +81,9 @@ export default function Agenda() {
       return
     }
     registrarLog(userEmail ?? 'sistema', 'Google Calendar sincronizado', `${resultado.criados ?? 0} criados, ${resultado.atualizados ?? 0} atualizados, ${resultado.cancelados ?? 0} cancelados`)
-    alert(`Sincronizado! ${resultado.criados ?? 0} criados, ${resultado.atualizados ?? 0} atualizados, ${resultado.cancelados ?? 0} removidos.`)
+    const erros = resultado.erros ?? []
+    const avisoErros = erros.length > 0 ? `\n\n${erros.length} serviço(s) com falha:\n${erros.slice(0, 3).join('\n')}${erros.length > 3 ? '\n…' : ''}` : ''
+    alert(`Sincronizado! ${resultado.criados ?? 0} criados, ${resultado.atualizados ?? 0} atualizados, ${resultado.cancelados ?? 0} removidos.${avisoErros}`)
   }
 
   const meuNomeOperador = useMemo(() => {
@@ -134,6 +136,24 @@ export default function Agenda() {
   function enderecoDoServico(s: Servico) {
     if (s.endereco) return s.endereco
     return clientes.find((c) => c.id === s.clienteId)?.enderecos[0]?.endereco ?? ''
+  }
+
+  // Coordenadas confirmadas no mapa no cadastro do cliente (ver EnderecosEditor), se
+  // houver — abrem a rota exata no Google Maps em vez de depender dele adivinhar o
+  // endereço só pelo texto, que é o que faz o GPS cair na rua errada quando existem
+  // ruas de mesmo nome em bairros diferentes.
+  function coordenadasDoServico(s: Servico): { lat: number; lng: number } | null {
+    if (s.endereco) {
+      return s.enderecoLat != null && s.enderecoLng != null ? { lat: s.enderecoLat, lng: s.enderecoLng } : null
+    }
+    const primeiro = clientes.find((c) => c.id === s.clienteId)?.enderecos[0]
+    return primeiro?.lat != null && primeiro?.lng != null ? { lat: primeiro.lat, lng: primeiro.lng } : null
+  }
+
+  function linkRotaServico(s: Servico) {
+    const coords = coordenadasDoServico(s)
+    const destino = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(enderecoDoServico(s))
+    return `https://www.google.com/maps/dir/?api=1&destination=${destino}`
   }
 
   function renderAcoes(s: Servico) {
@@ -213,7 +233,7 @@ export default function Agenda() {
                       </p>
                       {enderecoDoServico(s) && (
                         <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(enderecoDoServico(s))}`}
+                          href={linkRotaServico(s)}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}

@@ -11,6 +11,8 @@ interface ServicoRow {
   hora_agendada: string
   status: string
   endereco: string | null
+  endereco_lat: number | null
+  endereco_lng: number | null
   observacoes: string | null
   valor: number
   tipo_atendimento: string
@@ -36,6 +38,8 @@ function fromRow(r: ServicoRow): Servico {
     horaAgendada: r.hora_agendada,
     status: r.status as Servico['status'],
     endereco: r.endereco ?? '',
+    enderecoLat: r.endereco_lat ?? undefined,
+    enderecoLng: r.endereco_lng ?? undefined,
     observacoes: r.observacoes ?? undefined,
     valor: Number(r.valor),
     tipoAtendimento: r.tipo_atendimento as Servico['tipoAtendimento'],
@@ -62,6 +66,8 @@ function toRow(s: Servico): ServicoRow {
     hora_agendada: s.horaAgendada,
     status: s.status,
     endereco: s.endereco ?? null,
+    endereco_lat: s.enderecoLat ?? null,
+    endereco_lng: s.enderecoLng ?? null,
     observacoes: s.observacoes ?? null,
     valor: s.valor,
     tipo_atendimento: s.tipoAtendimento,

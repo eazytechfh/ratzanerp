@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, Wrench, Wallet, Bug, Menu, X, LogOut, ChevronDown, UsersRound, CalendarDays, History, Truck,
+  LayoutDashboard, Users, Wrench, Wallet, Menu, X, LogOut, ChevronDown, UsersRound, CalendarDays, History, Truck,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { canAccessRoute } from '../lib/permissions'
 import { USER_ROLE_LABELS } from '../types'
+import ratzanLogo from '../assets/ratzan-logo.webp'
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -47,8 +48,8 @@ export default function AppLayout() {
         }`}
       >
         <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
-          <div className="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center shrink-0">
-            <Bug size={18} />
+          <div className="bg-white rounded-lg px-1.5 py-1 flex items-center justify-center shrink-0">
+            <img src={ratzanLogo} alt="Ratzan" className="h-6 w-auto" />
           </div>
           <span className="font-bold text-lg tracking-tight">Ratzan ERP</span>
           <button className="ml-auto lg:hidden text-white/60" onClick={() => setSidebarOpen(false)}>

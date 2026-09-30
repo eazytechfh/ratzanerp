@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import type { FormaPagamento, Maquininha, ParcelaServico, Servico } from '../types'
-import { MAQUININHAS } from '../types'
+import type { FormaPagamento, Maquininha, ParcelaServico, Periodicidade, Servico } from '../types'
+import { MAQUININHAS, PERIODICIDADES } from '../types'
 import { useClientes } from '../data/clienteStore'
 import { addServico } from '../data/servicoStore'
+import { addContaReceberManual } from '../data/manualReceivableStore'
 import { useOperadores } from '../data/operadorStore'
 import { useTiposServico } from '../data/tipoServicoStore'
 import { useTiposPraga } from '../data/tipoPragaStore'
@@ -56,6 +57,9 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   const [garantiaAte, setGarantiaAte] = useState('')
   const [multiplasDatas, setMultiplasDatas] = useState(false)
   const [datasExtras, setDatasExtras] = useState<{ data: string; hora: string }[]>([])
+  const [pagamentoRecorrente, setPagamentoRecorrente] = useState(false)
+  const [periodicidadeRecorrente, setPeriodicidadeRecorrente] = useState<Periodicidade>('Mensal')
+  const [repeticoes, setRepeticoes] = useState(12)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   function addDataExtra() {
@@ -89,6 +93,20 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   }
 
   const valorDispensado = formaPagamento === 'garantia' || formaPagamento === 'incluso_no_contrato'
+  // Recorrência duplica o valor no contas a receber/fluxo de caixa; não combina com o
+  // parcelamento de boleto (que já espalha o valor de UM serviço em várias datas).
+  const recorrenciaIndisponivel = formaPagamento === 'boleto_pj' && parcelas > 1
+
+  // Soma meses a uma data 'YYYY-MM-DD' conforme a periodicidade, para calcular os
+  // vencimentos futuros do pagamento recorrente.
+  function addPeriodo(dataStr: string, periodicidade: Periodicidade, vezes: number): string {
+    const meses: Partial<Record<Periodicidade, number>> = {
+      Mensal: 1, Bimestral: 2, Trimestral: 3, Semestral: 6, Anual: 12,
+    }
+    const d = new Date(dataStr + 'T00:00:00')
+    d.setMonth(d.getMonth() + (meses[periodicidade] ?? 1) * vezes)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
 
   function validate() {
     const errs: Record<string, string> = {}
@@ -135,6 +153,8 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
         horaAgendada: hora,
         status: 'agendado',
         endereco: cliente.enderecos[0]?.endereco ?? '',
+        enderecoLat: cliente.enderecos[0]?.lat,
+        enderecoLng: cliente.enderecos[0]?.lng,
         observacoes,
         valor: ehPrimeiro && !valorDispensado ? Number(valor) : 0,
         tipoAtendimento: ehPrimeiro && formaPagamento === 'garantia' ? 'reforco' : 'novo',
@@ -159,6 +179,23 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
       setErrors({ valor: 'Não foi possível salvar um ou mais serviços. Tente novamente.' })
       return
     }
+
+    if (pagamentoRecorrente && !recorrenciaIndisponivel && !valorDispensado) {
+      const valorNumerico = Number(valor)
+      for (let n = 1; n < repeticoes; n++) {
+        await addContaReceberManual({
+          id: `crm-rec-${Date.now()}-${n}`,
+          clienteId: cliente.id,
+          clienteNome: cliente.nome,
+          descricao: `${tipoServico} (recorrência ${n + 1}/${repeticoes})`,
+          valor: valorNumerico,
+          vencimento: addPeriodo(dataAgendada, periodicidadeRecorrente, n),
+          status: 'pendente',
+        })
+      }
+      registrarLog(userEmail ?? 'sistema', 'Pagamento recorrente configurado', `${tipoServico} — ${cliente.nome} — ${repeticoes}x ${periodicidadeRecorrente}`)
+    }
+
     onClose()
   }
 
@@ -410,6 +447,56 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
               </div>
             )}
           </div>
+
+          {!valorDispensado && (
+            <div>
+              <label className={`flex items-center gap-2 text-sm ${recorrenciaIndisponivel ? 'text-slate-400' : 'text-slate-700'}`}>
+                <input
+                  type="checkbox"
+                  checked={pagamentoRecorrente && !recorrenciaIndisponivel}
+                  disabled={recorrenciaIndisponivel}
+                  onChange={(e) => setPagamentoRecorrente(e.target.checked)}
+                  className="rounded border-slate-300 text-brand-600 focus:ring-brand-200 disabled:opacity-50"
+                />
+                Pagamento recorrente
+              </label>
+              {recorrenciaIndisponivel && (
+                <p className="text-xs text-slate-500 mt-1 ml-6">Não disponível com boleto parcelado.</p>
+              )}
+              {pagamentoRecorrente && !recorrenciaIndisponivel && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Periodicidade</label>
+                    <select
+                      value={periodicidadeRecorrente}
+                      onChange={(e) => setPeriodicidadeRecorrente(e.target.value as Periodicidade)}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
+                    >
+                      {PERIODICIDADES.filter((p) => p !== 'Avulso').map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Quantas vezes</label>
+                    <input
+                      type="number"
+                      min="2"
+                      max="60"
+                      value={repeticoes}
+                      onChange={(e) => setRepeticoes(Math.min(60, Math.max(2, Number(e.target.value) || 2)))}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                  </div>
+                  <p className="col-span-2 text-xs text-slate-500">
+                    Este serviço é a 1ª cobrança. Serão lançadas mais {repeticoes - 1} no contas a receber (e no fluxo de caixa),
+                    a cada {periodicidadeRecorrente.toLowerCase()}
+                    {valor ? `, de ${Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cada` : ''}.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Garantia até</label>

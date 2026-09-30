@@ -212,6 +212,18 @@ export default function ClienteDetalhe() {
                 <p className="text-xs font-semibold text-brand-600 mb-0.5">{end.rotulo}</p>
                 <p className="text-sm text-slate-700">{end.endereco}</p>
                 <p className="text-xs text-slate-400">{end.cidade}/{end.uf} · {end.cep}</p>
+                <a
+                  href={
+                    end.lat != null && end.lng != null
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${end.lat},${end.lng}`
+                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end.endereco)}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-brand-600 hover:text-brand-700 hover:underline inline-flex items-center gap-1 mt-1"
+                >
+                  <MapPin size={11} /> {end.lat != null ? 'Abrir rota (pino confirmado)' : 'Abrir rota'}
+                </a>
               </div>
             ))}
             {cliente.enderecos.length === 0 && (

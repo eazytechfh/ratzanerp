@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Bug, Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import ratzanLogo from '../assets/ratzan-logo.webp'
 
 export default function Login() {
   const { login } = useAuth()
@@ -37,8 +38,8 @@ export default function Login() {
         </div>
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
-              <Bug size={24} />
+            <div className="h-11 px-3 rounded-xl bg-white flex items-center justify-center">
+              <img src={ratzanLogo} alt="Ratzan" className="h-7 w-auto" />
             </div>
             <span className="text-2xl font-bold tracking-tight">Ratzan ERP</span>
           </div>
@@ -58,8 +59,8 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-slate-50">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-11 h-11 rounded-xl bg-brand-600 flex items-center justify-center text-white">
-              <Bug size={22} />
+            <div className="h-11 px-3 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+              <img src={ratzanLogo} alt="Ratzan" className="h-6 w-auto" />
             </div>
             <span className="text-2xl font-bold text-ink-900">Ratzan ERP</span>
           </div>

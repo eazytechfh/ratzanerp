@@ -9,6 +9,10 @@ export interface Endereco {
   cidade: string
   uf: string
   cep: string
+  // Coordenadas confirmadas no mapa ao cadastrar (ver EnderecosEditor). Ausentes em
+  // endereços cadastrados antes dessa funcionalidade, ou nunca confirmados no mapa.
+  lat?: number
+  lng?: number
 }
 
 export interface CategoriaCliente {
@@ -92,19 +96,28 @@ export const MAQUININHAS: { value: Maquininha; label: string }[] = [
   { value: 'santander', label: 'Santander' },
 ]
 
-// Taxas fictícias — ajustar quando os dados reais das maquininhas forem informados.
+// Taxas reais informadas pela operadora (tela "Planos e taxas", set/2026): débito à vista
+// 0,97%, crédito à vista 1,67%, parcelado 2x-6x 1,97%, parcelado 7x-12x 2,17%.
+// Mesma tabela aplicada às três maquininhas até termos taxas específicas por máquina.
+function taxaCreditoPadrao(parcelas: number): number {
+  const n = Math.max(parcelas, 1)
+  if (n === 1) return 0.0167
+  if (n <= 6) return 0.0197
+  return 0.0217
+}
+
 export const TAXAS_MAQUININHA: Record<Maquininha, { debito: number; credito: (parcelas: number) => number }> = {
   infinity: {
-    debito: 0.0159,
-    credito: (parcelas) => 0.0299 + (Math.max(parcelas, 1) - 1) * 0.0119,
+    debito: 0.0097,
+    credito: taxaCreditoPadrao,
   },
   itau: {
-    debito: 0.0179,
-    credito: (parcelas) => 0.0349 + (Math.max(parcelas, 1) - 1) * 0.0129,
+    debito: 0.0097,
+    credito: taxaCreditoPadrao,
   },
   santander: {
-    debito: 0.0169,
-    credito: (parcelas) => 0.0319 + (Math.max(parcelas, 1) - 1) * 0.0124,
+    debito: 0.0097,
+    credito: taxaCreditoPadrao,
   },
 }
 
@@ -144,6 +157,10 @@ export interface Servico {
   horaAgendada: string
   status: StatusServico
   endereco: string
+  // Coordenadas copiadas do endereço do cliente no momento do agendamento (se o
+  // endereço tinha pino confirmado no mapa), usadas para abrir a rota exata na Agenda.
+  enderecoLat?: number
+  enderecoLng?: number
   observacoes?: string
   valor: number
   tipoAtendimento: TipoAtendimento
