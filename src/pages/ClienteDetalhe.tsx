@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2, CalendarClock,
+  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2, CalendarClock, Compass,
 } from 'lucide-react'
 import { useClientes, removeCliente } from '../data/clienteStore'
 import { useAuth } from '../context/AuthContext'
@@ -200,6 +200,7 @@ export default function ClienteDetalhe() {
             label="Contrato"
             value={`${new Date(cliente.contratoInicio + 'T00:00:00').toLocaleDateString('pt-BR')} até ${cliente.contratoFim ? new Date(cliente.contratoFim + 'T00:00:00').toLocaleDateString('pt-BR') : 'sem data definida'}`}
           />
+          <InfoItem icon={Compass} label="Origem" value={cliente.origem || '-'} />
         </div>
 
         <div className="mt-6 pt-6 border-t border-slate-100">

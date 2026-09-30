@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
-import type { Cliente, Endereco, StatusCliente, SegmentoCliente } from '../types'
-import { SEGMENTOS_CLIENTE } from '../types'
+import type { Cliente, Endereco, StatusCliente, SegmentoCliente, OrigemServico } from '../types'
+import { SEGMENTOS_CLIENTE, ORIGENS_SERVICO } from '../types'
 import { updateCliente } from '../data/clienteStore'
 import { useCategorias } from '../data/categoriaStore'
 import { registrarLog } from '../data/logStore'
@@ -29,6 +29,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
   const [bairro, setBairro] = useState(cliente.bairro)
   const [contatoResponsavel, setContatoResponsavel] = useState(cliente.contatoResponsavel ?? '')
   const [categoriaId, setCategoriaId] = useState(cliente.categoriaId ?? '')
+  const [origem, setOrigem] = useState<OrigemServico>(cliente.origem)
   const [status, setStatus] = useState<StatusCliente>(cliente.status)
   const [contratoInicio, setContratoInicio] = useState(cliente.contratoInicio)
   const [contratoFim, setContratoFim] = useState(cliente.contratoFim ?? '')
@@ -59,6 +60,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
       bairro: bairro.trim(),
       contatoResponsavel: cliente.tipo === 'PJ' ? contatoResponsavel.trim() || undefined : undefined,
       categoriaId: categoriaId || undefined,
+      origem,
       status,
       contratoInicio,
       contratoFim: contratoFim || undefined,
@@ -191,6 +193,19 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Origem</label>
+            <select
+              value={origem}
+              onChange={(e) => setOrigem(e.target.value as OrigemServico)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
+            >
+              {ORIGENS_SERVICO.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
           </div>
 
           <div>
