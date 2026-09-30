@@ -363,7 +363,11 @@ export default function ClienteDetalhe() {
                   <td className="px-6 py-3 hidden sm:table-cell text-slate-600">{s.operador}</td>
                   <td className="px-6 py-3"><ServicoStatusBadge status={s.status} /></td>
                   <td className="px-6 py-3 text-right text-slate-700">
-                    {s.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {s.contabilizarReceita ? (
+                      s.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    ) : (
+                      <span className="text-slate-300" title="Este serviço não gera cobrança própria (ex: data extra de um agendamento em lote, garantia ou incluso no contrato)">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -158,7 +158,11 @@ export default function Servicos() {
                   <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{s.operador}</td>
                   <td className="px-4 py-3"><ServicoStatusBadge status={s.status} /></td>
                   <td className="px-4 py-3 text-right text-slate-700">
-                    {s.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {s.contabilizarReceita ? (
+                      s.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    ) : (
+                      <span className="text-slate-300" title="Este serviço não gera cobrança própria (ex: data extra de um agendamento em lote, garantia ou incluso no contrato)">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-300"><ChevronRight size={18} /></td>
                 </tr>
