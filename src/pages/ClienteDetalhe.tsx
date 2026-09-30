@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2, CalendarClock, Compass,
+  ArrowLeft, Building2, User, Mail, Phone, MapPin, Calendar, Repeat, PawPrint, HardHat, Pencil, Wrench, FileText, Bell, CheckCircle2, Trash2, CalendarClock, Compass, Receipt,
 } from 'lucide-react'
 import { useClientes, removeCliente } from '../data/clienteStore'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +10,7 @@ import { getCategoriaById } from '../data/categoriaStore'
 import { useServicos } from '../data/servicoStore'
 import { useContratos } from '../data/contratoStore'
 import { useAlertas, concluirAlerta } from '../data/alertaStore'
+import { useContasReceberManuais } from '../data/manualReceivableStore'
 import { ClienteStatusBadge, ServicoStatusBadge } from '../components/StatusBadge'
 import EditarClienteModal from '../components/EditarClienteModal'
 import NovoServicoModal from '../components/NovoServicoModal'
@@ -27,6 +28,7 @@ export default function ClienteDetalhe() {
   const servicos = useServicos()
   const contratos = useContratos()
   const alertas = useAlertas()
+  const contasManuais = useContasReceberManuais()
   const cliente = clientes.find((c) => c.id === id)
   const [editOpen, setEditOpen] = useState(false)
   const [novoServicoOpen, setNovoServicoOpen] = useState(false)
@@ -56,6 +58,16 @@ export default function ClienteDetalhe() {
       .sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1))
   }, [cliente, alertas])
 
+  // Cobranças manuais (inclui as geradas pelo "pagamento recorrente" no cadastro de
+  // serviço) — não são Servico, então não aparecem no histórico de serviços nem
+  // entravam no total investido sem isso.
+  const cobrancasManuaisCliente = useMemo(() => {
+    if (!cliente) return []
+    return contasManuais
+      .filter((m) => m.clienteId === cliente.id)
+      .sort((a, b) => (a.vencimento < b.vencimento ? 1 : -1))
+  }, [cliente, contasManuais])
+
   if (!cliente) {
     return (
       <div className="text-center py-16">
@@ -65,9 +77,9 @@ export default function ClienteDetalhe() {
     )
   }
 
-  const totalGasto = historico
-    .filter((s) => s.status === 'concluido')
-    .reduce((acc, s) => acc + s.valor, 0)
+  const totalGasto =
+    historico.filter((s) => s.status === 'concluido').reduce((acc, s) => acc + s.valor, 0) +
+    cobrancasManuaisCliente.filter((m) => m.status === 'pago').reduce((acc, m) => acc + m.valor, 0)
 
   const podeExcluir = perfil?.role === 'administrador' || perfil?.role === 'gerente_geral'
 
@@ -272,6 +284,55 @@ export default function ClienteDetalhe() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {cobrancasManuaisCliente.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h2 className="font-semibold text-ink-900 flex items-center gap-2">
+              <Receipt size={16} className="text-brand-600" /> Cobranças manuais / recorrentes
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {cobrancasManuaisCliente.length} lançamento(s) — inclui as parcelas geradas pelo pagamento recorrente
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-100">
+                  <th className="px-6 py-3 font-medium">Vencimento</th>
+                  <th className="px-6 py-3 font-medium">Descrição</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
+                  <th className="px-6 py-3 font-medium text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cobrancasManuaisCliente.map((m) => (
+                  <tr key={m.id} className="border-b border-slate-50 last:border-0">
+                    <td className="px-6 py-3 text-slate-600 whitespace-nowrap">
+                      {new Date(m.vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-3 font-medium text-ink-900">{m.descricao}</td>
+                    <td className="px-6 py-3">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                        m.status === 'pago'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : m.status === 'cancelado'
+                            ? 'bg-slate-100 text-slate-500 border-slate-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {m.status === 'pago' ? 'Pago' : m.status === 'cancelado' ? 'Cancelado' : 'Pendente'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right text-slate-700">
+                      {m.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
