@@ -73,7 +73,8 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
       dataAgendada,
       horaAgendada,
       valor: valorDispensado ? 0 : Number(valor),
-      tipoAtendimento: formaPagamento === 'garantia' ? 'reforco' : 'novo',
+      // Visita é um tipo próprio (cadastro de visita no cliente) — não pode virar "novo" ao editar.
+      tipoAtendimento: servico.tipoAtendimento === 'visita' ? 'visita' : formaPagamento === 'garantia' ? 'reforco' : 'novo',
       pragas,
       formaPagamento,
       parcelas: formaPagamento === 'credito' || formaPagamento === 'boleto_pj' ? parcelas : undefined,

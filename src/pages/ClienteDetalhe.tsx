@@ -7,18 +7,23 @@ import { useClientes, removeCliente } from '../data/clienteStore'
 import { useAuth } from '../context/AuthContext'
 import { registrarLog } from '../data/logStore'
 import { getCategoriaById } from '../data/categoriaStore'
-import { useServicos } from '../data/servicoStore'
+import { useServicos, removeServico } from '../data/servicoStore'
 import { useContratos } from '../data/contratoStore'
 import { useAlertas, concluirAlerta } from '../data/alertaStore'
-import { useContasReceberManuais } from '../data/manualReceivableStore'
+import { useContasReceberManuais, cancelarContaReceberManual } from '../data/manualReceivableStore'
+import { canAccessRoute } from '../lib/permissions'
 import { ClienteStatusBadge, ServicoStatusBadge } from '../components/StatusBadge'
 import EditarClienteModal from '../components/EditarClienteModal'
+import EditarServicoModal from '../components/EditarServicoModal'
+import EditarContaReceberManualModal from '../components/EditarContaReceberManualModal'
 import NovoServicoModal from '../components/NovoServicoModal'
 import NovaVisitaModal from '../components/NovaVisitaModal'
 import NovoContratoModal from '../components/NovoContratoModal'
 import ContratoViewModal from '../components/ContratoViewModal'
 import IncluirAlertaModal from '../components/IncluirAlertaModal'
-import type { Contrato } from '../types'
+import type { Contrato, ContaReceberManual, Servico } from '../types'
+
+const fmtMoeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>()
@@ -36,6 +41,8 @@ export default function ClienteDetalhe() {
   const [novoContratoOpen, setNovoContratoOpen] = useState(false)
   const [novoAlertaOpen, setNovoAlertaOpen] = useState(false)
   const [contratoVisualizando, setContratoVisualizando] = useState<Contrato | null>(null)
+  const [servicoEditando, setServicoEditando] = useState<Servico | null>(null)
+  const [cobrancaEditando, setCobrancaEditando] = useState<ContaReceberManual | null>(null)
 
   const historico = useMemo(() => {
     if (!cliente) return []
@@ -82,6 +89,27 @@ export default function ClienteDetalhe() {
     cobrancasManuaisCliente.filter((m) => m.status === 'pago').reduce((acc, m) => acc + m.valor, 0)
 
   const podeExcluir = perfil?.role === 'administrador' || perfil?.role === 'gerente_geral'
+  // Cobranças manuais são lançamentos do Financeiro — só quem acessa o Financeiro mexe nelas.
+  const podeGerirCobrancas = perfil ? canAccessRoute(perfil.role, '/financeiro') : false
+
+  function handleExcluirServico(s: Servico) {
+    const data = new Date(s.dataAgendada + 'T00:00:00').toLocaleDateString('pt-BR')
+    const avisoConcluido = s.status === 'concluido'
+      ? '\n\nATENÇÃO: este serviço já foi concluído — a baixa, a OS e o certificado dele também serão perdidos.'
+      : ''
+    if (!window.confirm(`Excluir o serviço "${s.tipoServico}" de ${data}?\n\nEle também sai da Agenda e do contas a receber.${avisoConcluido}`)) return
+    removeServico(s.id)
+    registrarLog(userEmail ?? 'sistema', 'Serviço excluído', `${s.tipoServico} — ${s.clienteNome} (${data})`)
+  }
+
+  function handleExcluirCobranca(m: ContaReceberManual) {
+    const avisoPago = m.status === 'pago'
+      ? '\n\nATENÇÃO: esta cobrança já está paga — ao excluir, o valor deixa de contar no total recebido.'
+      : ''
+    if (!window.confirm(`Excluir a cobrança "${m.descricao}" de ${fmtMoeda(m.valor)}?\n\nEla também sai do Financeiro (contas a receber e fluxo de caixa).${avisoPago}`)) return
+    cancelarContaReceberManual(m.id)
+    registrarLog(userEmail ?? 'sistema', 'Cobrança excluída', `${m.clienteNome} — ${m.descricao} (${fmtMoeda(m.valor)})`)
+  }
 
   function handleExcluirCliente() {
     if (!cliente) return
@@ -306,6 +334,7 @@ export default function ClienteDetalhe() {
                   <th className="px-6 py-3 font-medium">Descrição</th>
                   <th className="px-6 py-3 font-medium">Status</th>
                   <th className="px-6 py-3 font-medium text-right">Valor</th>
+                  {podeGerirCobrancas && <th className="px-6 py-3" />}
                 </tr>
               </thead>
               <tbody>
@@ -327,8 +356,28 @@ export default function ClienteDetalhe() {
                       </span>
                     </td>
                     <td className="px-6 py-3 text-right text-slate-700">
-                      {m.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {fmtMoeda(m.valor)}
                     </td>
+                    {podeGerirCobrancas && (
+                      <td className="px-6 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setCobrancaEditando(m)}
+                            className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
+                            title="Editar cobrança"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleExcluirCobranca(m)}
+                            className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50"
+                            title="Excluir cobrança"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -351,6 +400,7 @@ export default function ClienteDetalhe() {
                 <th className="px-6 py-3 font-medium hidden sm:table-cell">Operador</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium text-right">Valor</th>
+                <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -364,16 +414,34 @@ export default function ClienteDetalhe() {
                   <td className="px-6 py-3"><ServicoStatusBadge status={s.status} /></td>
                   <td className="px-6 py-3 text-right text-slate-700">
                     {s.contabilizarReceita ? (
-                      s.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                      fmtMoeda(s.valor)
                     ) : (
                       <span className="text-slate-300" title="Este serviço não gera cobrança própria (ex: data extra de um agendamento em lote, garantia ou incluso no contrato)">—</span>
                     )}
+                  </td>
+                  <td className="px-6 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setServicoEditando(s)}
+                        className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
+                        title="Editar serviço"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleExcluirServico(s)}
+                        className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50"
+                        title="Excluir serviço"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {historico.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-slate-400">
+                  <td colSpan={6} className="px-6 py-10 text-center text-slate-400">
                     Nenhum serviço registrado para este cliente ainda.
                   </td>
                 </tr>
@@ -428,6 +496,8 @@ export default function ClienteDetalhe() {
       </div>
 
       {editOpen && <EditarClienteModal cliente={cliente} onClose={() => setEditOpen(false)} />}
+      {servicoEditando && <EditarServicoModal servico={servicoEditando} onClose={() => setServicoEditando(null)} />}
+      {cobrancaEditando && <EditarContaReceberManualModal conta={cobrancaEditando} onClose={() => setCobrancaEditando(null)} />}
       {novoServicoOpen && (
         <NovoServicoModal clienteIdInicial={cliente.id} onClose={() => setNovoServicoOpen(false)} />
       )}
