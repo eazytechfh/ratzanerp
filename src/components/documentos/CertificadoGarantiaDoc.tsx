@@ -44,7 +44,7 @@ export default function CertificadoGarantiaDoc({ servico, cliente }: Props) {
   const baixa = servico.baixa
   const dataServico = baixa?.dataServico ?? servico.dataAgendada
   const garantiaAte = baixa?.garantiaAte
-  const horaInicio = baixa?.horaInicio ?? servico.horaAgendada
+  const horaInicio = baixa?.horaInicio ?? servico.horaInicioReal ?? servico.horaAgendada
   const horaFim = baixa?.horaFim
   const pragas = (baixa?.pragas ?? servico.pragas)
 

@@ -7,6 +7,7 @@ import { ServicoStatusBadge } from '../components/StatusBadge'
 import OrdemServicoDoc from '../components/documentos/OrdemServicoDoc'
 import CertificadoGarantiaDoc from '../components/documentos/CertificadoGarantiaDoc'
 import AvisoDoc from '../components/documentos/AvisoDoc'
+import HistoricoServico from '../components/HistoricoServico'
 
 type Aba = 'detalhes' | 'os' | 'certificado' | 'aviso'
 
@@ -133,6 +134,8 @@ export default function ServicoDetalhe() {
               </div>
             </div>
           )}
+
+          <HistoricoServico servico={servico} />
         </div>
       )}
 

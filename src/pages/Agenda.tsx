@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil } from 'lucide-react'
-import { useServicos, updateServico, removeServico } from '../data/servicoStore'
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil, AlertTriangle } from 'lucide-react'
+import { useServicos, removeServico } from '../data/servicoStore'
 import { useClientes } from '../data/clienteStore'
 import { useOperadores } from '../data/operadorStore'
 import { registrarLog } from '../data/logStore'
@@ -9,6 +9,11 @@ import { ServicoStatusBadge } from '../components/StatusBadge'
 import DarBaixaModal from '../components/DarBaixaModal'
 import ReagendarModal from '../components/ReagendarModal'
 import EditarServicoModal from '../components/EditarServicoModal'
+import IniciarServicoModal from '../components/IniciarServicoModal'
+import JustificarAtrasoModal from '../components/JustificarAtrasoModal'
+import { useEventosServico } from '../data/servicoEventoStore'
+import { purgarFotosExpiradas } from '../data/fotoServicoStore'
+import { situacaoDeAtraso, inicioRealDoServico, fmtHora, fmtDuracao } from '../lib/atraso'
 import { conectarGoogleCalendar, useGoogleCalendarConectado, sincronizarGoogleCalendar } from '../data/googleCalendarClient'
 import type { Servico } from '../types'
 
@@ -61,6 +66,21 @@ export default function Agenda() {
   const [modalEditar, setModalEditar] = useState(false)
   const googleConectado = useGoogleCalendarConectado(perfil?.id)
   const [sincronizando, setSincronizando] = useState(false)
+  const [servicoIniciando, setServicoIniciando] = useState<Servico | null>(null)
+  const [justificando, setJustificando] = useState<{ servico: Servico; minutos: number } | null>(null)
+  const eventos = useEventosServico()
+
+  // Relógio da tela: reavalia "atrasado" a cada 30s sem precisar recarregar a página.
+  const [agora, setAgora] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 30_000)
+    return () => clearInterval(t)
+  }, [])
+
+  // As fotos de início de serviço só ficam 7 dias — apaga as vencidas ao abrir a Agenda.
+  useEffect(() => {
+    purgarFotosExpiradas()
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -118,11 +138,9 @@ export default function Agenda() {
     registrarLog(userEmail ?? 'sistema', 'Serviço cancelado', `${s.tipoServico} — ${s.clienteNome}`)
   }
 
+  // Iniciar abre o modal da foto da fachada; o início em si é gravado lá.
   function handleIniciar(s: Servico) {
-    const agora = new Date()
-    const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`
-    updateServico(s.id, { status: 'em_andamento', horaInicioReal: horaAtual })
-    registrarLog(userEmail ?? 'sistema', 'Serviço iniciado', `${s.tipoServico} — ${s.clienteNome} às ${horaAtual}`)
+    setServicoIniciando(s)
   }
 
   function handleExcluir(s: Servico) {
@@ -132,6 +150,13 @@ export default function Agenda() {
   }
 
   const podeExcluir = perfil?.role !== 'operador'
+  // Justificar atraso: gerente operacional, gerente geral e administrador (não o operador).
+  const podeJustificar = perfil?.role !== 'operador'
+
+  function justificativaDoServico(s: Servico) {
+    const lista = eventos.filter((e) => e.servicoId === s.id && e.tipo === 'atraso_justificado')
+    return lista[lista.length - 1]
+  }
 
   function enderecoDoServico(s: Servico) {
     if (s.endereco) return s.endereco
@@ -158,8 +183,18 @@ export default function Agenda() {
 
   function renderAcoes(s: Servico) {
     if (s.status !== 'agendado' && s.status !== 'em_andamento') return null
+    const atraso = situacaoDeAtraso(s, eventos, agora)
+    const pedeJustificativa = (atraso.atrasadoSemIniciar || atraso.iniciouComAtraso) && !justificativaDoServico(s)
     return (
       <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1.5 sm:flex-wrap">
+        {podeJustificar && pedeJustificativa && (
+          <button
+            onClick={() => setJustificando({ servico: s, minutos: atraso.minutos })}
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 border border-rose-700 shadow-sm"
+          >
+            <AlertTriangle size={13} /> Justificar atraso
+          </button>
+        )}
         {s.status === 'agendado' && (
           <button
             onClick={() => handleIniciar(s)}
@@ -218,11 +253,36 @@ export default function Agenda() {
                 <span className="ml-2 text-xs font-normal text-slate-400">{lista.length} serviço(s)</span>
               </div>
               <div className="divide-y divide-slate-50">
-                {lista.map((s) => (
-                  <div key={s.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <div className="flex items-center gap-2 text-sm text-slate-500 w-20 shrink-0">
-                      <Clock size={14} />
-                      {s.horaAgendada}
+                {lista.map((s) => {
+                  const atraso = situacaoDeAtraso(s, eventos, agora)
+                  const inicio = inicioRealDoServico(s, eventos)
+                  const justificativa = justificativaDoServico(s)
+                  return (
+                  <div key={s.id} className={`px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 ${atraso.atrasadoSemIniciar ? 'bg-rose-50/60' : ''}`}>
+                    <div className="w-28 shrink-0">
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Clock size={14} />
+                        {s.horaAgendada}
+                      </div>
+                      {inicio && (
+                        <p className="text-xs font-semibold text-indigo-600 mt-0.5 pl-[22px]">Iniciou {fmtHora(inicio)}</p>
+                      )}
+                      {atraso.iniciouComAtraso && (
+                        <p className="text-[10px] font-bold text-rose-600 pl-[22px]">+{fmtDuracao(atraso.minutos)} de atraso</p>
+                      )}
+                      {atraso.atrasadoSemIniciar && (
+                        <div className="mt-1">
+                          <span className="inline-block bg-rose-600 text-white text-[11px] font-extrabold tracking-wider px-2 py-0.5 rounded shadow-sm ring-2 ring-rose-200">
+                            ATRASADO
+                          </span>
+                          <p className="text-[10px] font-semibold text-rose-600 mt-0.5">{fmtDuracao(atraso.minutos)} de atraso</p>
+                        </div>
+                      )}
+                      {justificativa && (
+                        <p className="text-[10px] font-medium text-amber-700 mt-0.5 cursor-help" title={`${justificativa.usuario}: ${justificativa.detalhe}`}>
+                          Atraso justificado
+                        </p>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-ink-900 truncate">{s.clienteNome}</p>
@@ -246,7 +306,8 @@ export default function Agenda() {
                     <ServicoStatusBadge status={s.status} />
                     {renderAcoes(s)}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )
@@ -314,7 +375,7 @@ export default function Agenda() {
       </div>
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visao, dataRef, servicosPorData])
+  }, [visao, dataRef, servicosPorData, eventos, agora, perfil])
 
   const tituloPeriodo = useMemo(() => {
     if (visao === 'dia') return dataRef.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
@@ -390,6 +451,12 @@ export default function Agenda() {
       )}
       {modalEditar && selecionado && (
         <EditarServicoModal servico={selecionado} onClose={() => { setModalEditar(false); setSelecionado(null) }} />
+      )}
+      {servicoIniciando && (
+        <IniciarServicoModal servico={servicoIniciando} onClose={() => setServicoIniciando(null)} />
+      )}
+      {justificando && (
+        <JustificarAtrasoModal servico={justificando.servico} minutos={justificando.minutos} onClose={() => setJustificando(null)} />
       )}
     </div>
   )

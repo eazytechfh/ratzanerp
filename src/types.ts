@@ -175,6 +175,18 @@ export interface Servico {
   baixa?: BaixaServico
 }
 
+// Histórico do serviço: o que aconteceu com ele (início, justificativa de atraso...).
+export type TipoEventoServico = 'inicio' | 'atraso_justificado'
+
+export interface EventoServico {
+  id: string
+  servicoId: string
+  tipo: TipoEventoServico
+  detalhe: string
+  usuario: string
+  criadoEm: string
+}
+
 export interface Operador {
   id: string
   nome: string

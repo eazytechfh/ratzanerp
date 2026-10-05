@@ -65,7 +65,8 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
   const tiposPraga = useTiposPraga()
   const [dataServico, setDataServico] = useState(fmtDate(new Date()))
   const [garantiaAte, setGarantiaAte] = useState(servico.garantiaAte ?? '')
-  const [horaInicio, setHoraInicio] = useState(servico.horaAgendada)
+  // A OS leva o horário em que o serviço foi realmente iniciado (não o agendado).
+  const [horaInicio, setHoraInicio] = useState(servico.horaInicioReal ?? servico.horaAgendada)
   const [horaFim, setHoraFim] = useState('')
   const [pragas, setPragas] = useState<string[]>(servico.pragas ?? [])
   const ehReforco = servico.tipoAtendimento === 'reforco'

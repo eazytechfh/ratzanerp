@@ -53,7 +53,8 @@ export default function ReagendarModal({ servico, onClose }: Props) {
       dataAgendada: novaData,
       horaAgendada: novaHora,
     }
-    updateServico(servico.id, { status: 'agendado', dataAgendada: novaData, horaAgendada: novaHora })
+    // Volta para "agendado": o início anterior (se já tinha sido iniciado) não vale mais.
+    updateServico(servico.id, { status: 'agendado', dataAgendada: novaData, horaAgendada: novaHora, horaInicioReal: undefined })
     const opcaoLabel = opcao === 'escolher'
       ? `${new Date(novaData + 'T00:00:00').toLocaleDateString('pt-BR')} às ${novaHora}`
       : OPCOES.find((o) => o.key === opcao)?.label ?? opcao

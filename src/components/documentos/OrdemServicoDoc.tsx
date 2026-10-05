@@ -46,7 +46,8 @@ export default function OrdemServicoDoc({ servico, cliente }: Props) {
   const baixa = servico.baixa
   const dataServico = baixa?.dataServico ?? servico.dataAgendada
   const garantiaAte = baixa?.garantiaAte
-  const horaInicio = baixa?.horaInicio ?? servico.horaAgendada
+  // Horário em que o serviço foi iniciado de fato; o agendado só entra se nunca foi iniciado.
+  const horaInicio = baixa?.horaInicio ?? servico.horaInicioReal ?? servico.horaAgendada
   const horaFim = baixa?.horaFim
   const pragas = (baixa?.pragas ?? servico.pragas).length > 0 ? (baixa?.pragas ?? servico.pragas) : ['-']
   const categoria = getCategoriaById(cliente?.categoriaId)?.nome
