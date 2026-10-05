@@ -6,9 +6,20 @@ import { ServicoStatusBadge } from '../components/StatusBadge'
 import NovoServicoModal from '../components/NovoServicoModal'
 import TiposServicoModal from '../components/TiposServicoModal'
 import TiposPragaModal from '../components/TiposPragaModal'
+import PeriodoFiltro from '../components/financeiro/PeriodoFiltro'
 import type { StatusServico } from '../types'
 
 type FiltroStatus = 'todos' | StatusServico
+
+const MONTH_LABELS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+function mesMatch(dataStr: string, mes: Date | null) {
+  if (!mes) return true
+  return dataStr.slice(0, 7) === `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
+}
 
 const FILTROS: { key: FiltroStatus; label: string }[] = [
   { key: 'todos', label: 'Todos' },
@@ -26,13 +37,17 @@ export default function Servicos() {
   const [tiposOpen, setTiposOpen] = useState(false)
   const [tiposPragaOpen, setTiposPragaOpen] = useState(false)
   const [ordem, setOrdem] = useState<'desc' | 'asc'>('desc')
+  // Abre já no mês atual; "Todos os períodos" volta a mostrar tudo.
+  const [mesFiltro, setMesFiltro] = useState<Date | null>(() => new Date())
 
   function alternarOrdem() {
     setOrdem((prev) => (prev === 'desc' ? 'asc' : 'desc'))
   }
 
+  const doPeriodo = useMemo(() => servicos.filter((s) => mesMatch(s.dataAgendada, mesFiltro)), [servicos, mesFiltro])
+
   const filtrados = useMemo(() => {
-    return servicos
+    return doPeriodo
       .filter((s) => {
         const matchStatus = filtro === 'todos' || s.status === filtro
         const q = busca.trim().toLowerCase()
@@ -50,22 +65,27 @@ export default function Servicos() {
         const maiorPrimeiro = chaveA < chaveB ? 1 : -1
         return ordem === 'desc' ? maiorPrimeiro : -maiorPrimeiro
       })
-  }, [servicos, filtro, busca, ordem])
+  }, [doPeriodo, filtro, busca, ordem])
 
+  // As contagens dos filtros de status acompanham o período escolhido.
   const counts = useMemo(() => {
-    const c: Record<FiltroStatus, number> = { todos: servicos.length, agendado: 0, em_andamento: 0, concluido: 0, cancelado: 0 }
-    servicos.forEach((s) => {
+    const c: Record<FiltroStatus, number> = { todos: doPeriodo.length, agendado: 0, em_andamento: 0, concluido: 0, cancelado: 0 }
+    doPeriodo.forEach((s) => {
       c[s.status] += 1
     })
     return c
-  }, [servicos])
+  }, [doPeriodo])
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink-900">Serviços</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{servicos.length} ordens de serviço registradas</p>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {mesFiltro
+              ? `${doPeriodo.length} serviço(s) em ${MONTH_LABELS[mesFiltro.getMonth()]} de ${mesFiltro.getFullYear()} · ${servicos.length} no total`
+              : `${servicos.length} ordens de serviço registradas`}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -91,6 +111,8 @@ export default function Servicos() {
           </button>
         </div>
       </div>
+
+      <PeriodoFiltro mes={mesFiltro} onChange={setMesFiltro} />
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-card">
         <div className="p-4 flex flex-col sm:flex-row gap-3 border-b border-slate-100">
@@ -171,6 +193,11 @@ export default function Servicos() {
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
                     Nenhum serviço encontrado com esses filtros.
+                    {mesFiltro && servicos.length > 0 && (
+                      <span className="block text-xs mt-1">
+                        A lista está limitada ao mês selecionado — use "Todos os períodos" para buscar em todo o histórico.
+                      </span>
+                    )}
                   </td>
                 </tr>
               )}
