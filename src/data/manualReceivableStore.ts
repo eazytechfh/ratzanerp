@@ -58,6 +58,14 @@ export async function addContaReceberManual(conta: ContaReceberManual) {
   return created
 }
 
+/** Aplica `mudancas` a cada cobrança manual do cliente (retorne null para pular). */
+export function atualizarCobrancasManuaisDoCliente(
+  clienteId: string,
+  mudancas: (c: ContaReceberManual) => Partial<ContaReceberManual> | null,
+) {
+  return store.updateMany((c) => c.clienteId === clienteId, mudancas)
+}
+
 export async function editarContaReceberManual(id: string, changes: Partial<ContaReceberManual>) {
   const { error } = await store.update(id, changes)
   if (error) console.error(error)

@@ -109,6 +109,11 @@ export async function updateServico(id: string, changes: Partial<Servico>) {
   if (error) console.error(error)
 }
 
+/** Aplica `mudancas` a cada serviço do cliente (retorne null para pular o serviço). */
+export function atualizarServicosDoCliente(clienteId: string, mudancas: (s: Servico) => Partial<Servico> | null) {
+  return store.updateMany((s) => s.clienteId === clienteId, mudancas)
+}
+
 export async function removeServico(id: string) {
   const { error } = await store.remove(id)
   if (error) console.error(error)

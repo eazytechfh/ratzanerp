@@ -64,6 +64,11 @@ export async function addAlerta(alerta: Alerta) {
   return created
 }
 
+/** Aplica `mudancas` a cada alerta do cliente (retorne null para pular). */
+export function atualizarAlertasDoCliente(clienteId: string, mudancas: (a: Alerta) => Partial<Alerta> | null) {
+  return store.updateMany((a) => a.clienteId === clienteId, mudancas)
+}
+
 function proximaData(dataVencimento: string, frequencia?: Alerta['frequencia']) {
   const d = new Date(dataVencimento + 'T00:00:00')
   if (frequencia === 'diaria') d.setDate(d.getDate() + 1)

@@ -82,6 +82,24 @@ export function createSupabaseStore<T extends { id: string }, Row extends { id?:
     return {}
   }
 
+  // Atualiza vários registros de uma vez (ex.: refletir o novo nome do cliente em todos os
+  // serviços dele). Garante que a lista foi carregada antes, senão não haveria o que atualizar.
+  async function updateMany(
+    filter: (item: T) => boolean,
+    changes: (item: T) => Partial<T> | null,
+  ): Promise<{ error?: string; atualizados: number }> {
+    await load()
+    const alvos = cache.filter(filter)
+    const resultados = await Promise.all(
+      alvos.map(async (item) => {
+        const mudanca = changes(item)
+        return mudanca ? update(item.id, mudanca) : { error: undefined }
+      }),
+    )
+    const erro = resultados.find((r) => r.error)?.error
+    return { error: erro, atualizados: alvos.length }
+  }
+
   async function remove(id: string): Promise<{ error?: string }> {
     const { error } = await supabase.from(config.table).delete().eq('id', id)
     if (error) return { error: error.message }
@@ -96,5 +114,5 @@ export function createSupabaseStore<T extends { id: string }, Row extends { id?:
     await load()
   }
 
-  return { useAll, getAll, getById, add, update, remove, load, reload }
+  return { useAll, getAll, getById, add, update, updateMany, remove, load, reload }
 }

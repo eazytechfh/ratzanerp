@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { X } from 'lucide-react'
 import type { Cliente, Endereco, StatusCliente, SegmentoCliente, OrigemServico } from '../types'
 import { SEGMENTOS_CLIENTE, ORIGENS_SERVICO } from '../types'
-import { updateCliente } from '../data/clienteStore'
+import { updateCliente, getClienteById } from '../data/clienteStore'
+import { propagarEdicaoCliente } from '../data/clienteSync'
 import { useCategorias } from '../data/categoriaStore'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
@@ -49,12 +50,13 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
     return Object.keys(errs).length === 0
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
 
-    updateCliente(cliente.id, {
-      nome: nome.trim(),
+    const nomeNovo = nome.trim()
+    await updateCliente(cliente.id, {
+      nome: nomeNovo,
       email: email.trim() || undefined,
       telefone: telefone.trim(),
       bairro: bairro.trim(),
@@ -70,7 +72,21 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
       segmento: segmento || undefined,
       observacoes: observacoes.trim() || undefined,
     })
-    registrarLog(userEmail ?? 'sistema', 'Cliente editado', nome.trim())
+
+    // updateCliente não devolve erro; se o cadastro não foi salvo, o cache continua com o nome
+    // antigo — nesse caso não propaga nada e avisa, em vez de fechar como se tivesse dado certo.
+    if (getClienteById(cliente.id)?.nome !== nomeNovo) {
+      alert('Não foi possível salvar as alterações do cliente. Tente novamente.')
+      return
+    }
+
+    // Reflete nome/endereço nas cópias guardadas em serviços (Agenda), cobranças e alertas.
+    const erros = await propagarEdicaoCliente(cliente, { nome: nomeNovo, enderecos })
+    const detalhe = nomeNovo !== cliente.nome ? `${cliente.nome} → ${nomeNovo}` : nomeNovo
+    registrarLog(userEmail ?? 'sistema', 'Cliente editado', detalhe)
+    if (erros.length > 0) {
+      alert(`O cliente foi salvo, mas não deu para atualizar tudo (${erros.join('; ')}). Confira a Agenda e o Financeiro.`)
+    }
     onClose()
   }
 
