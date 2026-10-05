@@ -94,6 +94,7 @@ export function useContasReceber(): ContaReceberItem[] {
           vencimento: p.vencimento,
           status: overridesAtuais.has(id) ? 'pago' : 'pendente',
           origem: 'servico',
+          servicoId: s.id,
           formaPagamento: s.formaPagamento,
           tipoAtendimento: s.tipoAtendimento,
           parcela: idx + 1,
@@ -113,6 +114,7 @@ export function useContasReceber(): ContaReceberItem[] {
       vencimento: s.dataAgendada,
       status: overridesAtuais.has(id) || s.status === 'concluido' ? 'pago' : 'pendente',
       origem: 'servico',
+      servicoId: s.id,
       formaPagamento: s.formaPagamento,
       tipoAtendimento: s.tipoAtendimento,
     })

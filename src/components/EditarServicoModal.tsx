@@ -26,6 +26,20 @@ const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string }[] = [
   { value: 'incluso_no_contrato', label: 'Incluso no Contrato' },
 ]
 
+// Linhas editáveis das parcelas de um boleto parcelado (valor + vencimento de cada uma).
+// Vêm de parcelasDetalhe; em serviços antigos sem esse detalhe, a 1ª parcela assume o
+// valor/data do serviço e as demais começam em branco para serem preenchidas.
+function parcelasIniciais(s: Servico): { valor: string; vencimento: string }[] {
+  const n = s.parcelas ?? 1
+  if (s.formaPagamento !== 'boleto_pj' || n <= 1) return []
+  const det = s.parcelasDetalhe ?? []
+  return Array.from({ length: n }, (_, i) =>
+    det[i]
+      ? { valor: String(det[i].valor), vencimento: det[i].vencimento }
+      : { valor: i === 0 ? String(s.valor) : '', vencimento: i === 0 ? s.dataAgendada : '' },
+  )
+}
+
 export default function EditarServicoModal({ servico, onClose }: Props) {
   const clientes = useClientes()
   const tiposServico = useTiposServico()
@@ -43,6 +57,7 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>(servico.formaPagamento)
   const [parcelas, setParcelas] = useState(servico.parcelas ?? 1)
   const [maquininha, setMaquininha] = useState<Maquininha>(servico.maquininha ?? 'infinity')
+  const [parcelasEdit, setParcelasEdit] = useState(() => parcelasIniciais(servico))
   const [pragas, setPragas] = useState<string[]>(servico.pragas ?? [])
   const [garantiaAte, setGarantiaAte] = useState(servico.garantiaAte ?? '')
   const [observacoes, setObservacoes] = useState(servico.observacoes ?? '')
@@ -54,11 +69,34 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
 
   const valorDispensado = formaPagamento === 'garantia' || formaPagamento === 'incluso_no_contrato'
   const maxParcelas = formaPagamento === 'credito' || formaPagamento === 'boleto_pj' ? 12 : 1
+  // Boleto em várias parcelas: cada parcela tem seu valor e vencimento (vão pro contas a receber).
+  const boletoParcelado = formaPagamento === 'boleto_pj' && parcelas > 1
+
+  function handleParcelasChange(n: number) {
+    setParcelas(n)
+    if (formaPagamento !== 'boleto_pj') return
+    setParcelasEdit((prev) => {
+      const next = prev.slice(0, n)
+      while (next.length < n) {
+        next.push(next.length === 0 ? { valor, vencimento: dataAgendada } : { valor: '', vencimento: '' })
+      }
+      return next
+    })
+  }
+
+  function updateParcela(idx: number, field: 'valor' | 'vencimento', value: string) {
+    setParcelasEdit((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)))
+  }
 
   function validate() {
     const errs: Record<string, string> = {}
     if (!dataAgendada) errs.dataAgendada = 'Informe a data'
-    if (!valorDispensado && (!valor || Number(valor) <= 0)) errs.valor = 'Informe um valor válido'
+    if (boletoParcelado) {
+      const incompleta = parcelasEdit.length !== parcelas || parcelasEdit.some((p) => !p.valor || Number(p.valor) <= 0 || !p.vencimento)
+      if (incompleta) errs.parcelas = 'Preencha valor e vencimento de todas as parcelas'
+    } else if (!valorDispensado && (!valor || Number(valor) <= 0)) {
+      errs.valor = 'Informe um valor válido'
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -67,12 +105,18 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
     e.preventDefault()
     if (!validate()) return
 
+    const parcelasDetalhe = boletoParcelado
+      ? parcelasEdit.map((p) => ({ valor: Number(p.valor), vencimento: p.vencimento }))
+      : undefined
+
     await updateServico(servico.id, {
       tipoServico,
       operador,
       dataAgendada,
       horaAgendada,
-      valor: valorDispensado ? 0 : Number(valor),
+      // No boleto parcelado o valor do serviço é o da 1ª parcela (mesmo critério do cadastro).
+      valor: valorDispensado ? 0 : parcelasDetalhe ? parcelasDetalhe[0].valor : Number(valor),
+      parcelasDetalhe,
       // Visita é um tipo próprio (cadastro de visita no cliente) — não pode virar "novo" ao editar.
       tipoAtendimento: servico.tipoAtendimento === 'visita' ? 'visita' : formaPagamento === 'garantia' ? 'reforco' : 'novo',
       pragas,
@@ -169,7 +213,7 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
             </div>
           </div>
 
-          {!valorDispensado && (
+          {!valorDispensado && !boletoParcelado && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor (R$)</label>
               <input
@@ -194,6 +238,7 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
                   onClick={() => {
                     setFormaPagamento(f.value)
                     setParcelas(1)
+                    setParcelasEdit([])
                   }}
                   className={`px-2.5 py-2 rounded-lg text-xs font-semibold border transition ${
                     formaPagamento === f.value
@@ -231,13 +276,39 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Parcelas</label>
                 <select
                   value={parcelas}
-                  onChange={(e) => setParcelas(Number(e.target.value))}
+                  onChange={(e) => handleParcelasChange(Number(e.target.value))}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
                 >
                   {Array.from({ length: maxParcelas }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{n}x</option>
                   ))}
                 </select>
+              </div>
+            )}
+            {boletoParcelado && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-slate-500">Cada parcela vai para o contas a receber na sua data de vencimento.</p>
+                {parcelasEdit.map((p, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 w-16 shrink-0">Parcela {idx + 1}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Valor"
+                      value={p.valor}
+                      onChange={(e) => updateParcela(idx, 'valor', e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={p.vencimento}
+                      onChange={(e) => updateParcela(idx, 'vencimento', e.target.value)}
+                      className="w-40 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                  </div>
+                ))}
+                {errors.parcelas && <p className="text-xs text-rose-600">{errors.parcelas}</p>}
               </div>
             )}
           </div>

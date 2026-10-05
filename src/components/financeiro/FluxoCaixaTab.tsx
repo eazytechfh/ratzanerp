@@ -1,13 +1,26 @@
 import React, { useMemo, useState } from 'react'
-import { ArrowUpCircle, ArrowDownCircle, Download } from 'lucide-react'
+import { ArrowUpCircle, ArrowDownCircle, Download, Pencil } from 'lucide-react'
 import { useContasReceber } from '../../data/receivableStore'
 import { useContasPagar } from '../../data/contaPagarStore'
+import { useContasReceberManuais } from '../../data/manualReceivableStore'
+import { useServicos } from '../../data/servicoStore'
+import type { ContaPagar, ContaReceberManual, Servico } from '../../types'
+import EditarContaReceberManualModal from '../EditarContaReceberManualModal'
+import EditarContaPagarModal from '../EditarContaPagarModal'
+import EditarServicoModal from '../EditarServicoModal'
 import PeriodoFiltro from './PeriodoFiltro'
 
 function mesMatch(dataStr: string, mes: Date | null) {
   if (!mes) return true
   return dataStr.slice(0, 7) === `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
 }
+
+// Qual editor abre para cada movimento. Mensalidades recorrentes projetadas não têm
+// registro próprio, então não são editáveis aqui.
+type AcaoEdicao =
+  | { tipo: 'manual'; id: string }
+  | { tipo: 'servico'; servicoId: string }
+  | { tipo: 'pagar'; id: string }
 
 interface Movimento {
   id: string
@@ -17,13 +30,19 @@ interface Movimento {
   data: string
   status: 'pendente' | 'pago' | 'cancelado'
   valor: number
+  acao?: AcaoEdicao
 }
 
 export default function FluxoCaixaTab() {
   const contasReceber = useContasReceber()
   const contasPagar = useContasPagar()
+  const manuais = useContasReceberManuais()
+  const servicos = useServicos()
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos')
   const [mesFiltro, setMesFiltro] = useState<Date | null>(null)
+  const [manualEditando, setManualEditando] = useState<ContaReceberManual | null>(null)
+  const [servicoEditando, setServicoEditando] = useState<Servico | null>(null)
+  const [pagarEditando, setPagarEditando] = useState<ContaPagar | null>(null)
 
   const movimentos = useMemo<Movimento[]>(() => {
     const entradas: Movimento[] = contasReceber.map((c) => ({
@@ -34,6 +53,12 @@ export default function FluxoCaixaTab() {
       data: c.vencimento,
       status: c.status,
       valor: c.valor,
+      acao:
+        c.origem === 'manual'
+          ? { tipo: 'manual', id: c.id.replace(/^man-/, '') }
+          : c.origem === 'servico' && c.servicoId
+            ? { tipo: 'servico', servicoId: c.servicoId }
+            : undefined,
     }))
     const saidas: Movimento[] = contasPagar.map((c) => ({
       id: c.id,
@@ -43,9 +68,18 @@ export default function FluxoCaixaTab() {
       data: c.vencimento,
       status: c.status,
       valor: c.valor,
+      acao: { tipo: 'pagar', id: c.id },
     }))
     return [...entradas, ...saidas].sort((a, b) => (a.data < b.data ? -1 : 1))
   }, [contasReceber, contasPagar])
+
+  function handleEditar(m: Movimento) {
+    const acao = m.acao
+    if (!acao) return
+    if (acao.tipo === 'manual') setManualEditando(manuais.find((x) => x.id === acao.id) ?? null)
+    else if (acao.tipo === 'servico') setServicoEditando(servicos.find((s) => s.id === acao.servicoId) ?? null)
+    else setPagarEditando(contasPagar.find((x) => x.id === acao.id) ?? null)
+  }
 
   const movimentosDoPeriodo = useMemo(
     () => movimentos.filter((m) => mesMatch(m.data, mesFiltro)),
@@ -152,6 +186,7 @@ export default function FluxoCaixaTab() {
               <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Contraparte</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium text-right">Valor</th>
+              <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody>
@@ -179,11 +214,26 @@ export default function FluxoCaixaTab() {
                 <td className={`px-4 py-2.5 text-right font-medium ${m.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {m.tipo === 'entrada' ? '+' : '-'}{fmtMoeda(m.valor)}
                 </td>
+                <td className="px-4 py-2.5 text-right">
+                  {m.acao && (
+                    <button
+                      onClick={() => handleEditar(m)}
+                      className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
+                      title={m.acao.tipo === 'servico' ? 'Editar serviço (reflete na Agenda)' : 'Editar lançamento'}
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {manualEditando && <EditarContaReceberManualModal conta={manualEditando} onClose={() => setManualEditando(null)} />}
+      {servicoEditando && <EditarServicoModal servico={servicoEditando} onClose={() => setServicoEditando(null)} />}
+      {pagarEditando && <EditarContaPagarModal conta={pagarEditando} onClose={() => setPagarEditando(null)} />}
     </div>
   )
 }

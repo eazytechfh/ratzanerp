@@ -1,24 +1,26 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
-import type { ContaReceberManual } from '../types'
-import { editarContaReceberManual } from '../data/manualReceivableStore'
+import type { ContaPagar } from '../types'
+import { editarContaPagar } from '../data/contaPagarStore'
+import { useFornecedores } from '../data/fornecedorStore'
 import { registrarLog } from '../data/logStore'
 import { useAuth } from '../context/AuthContext'
 import MoneyInput from './MoneyInput'
 
 interface Props {
-  conta: ContaReceberManual
+  conta: ContaPagar
   onClose: () => void
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10)
 
-// Edita um lançamento manual do contas a receber (inclui as parcelas geradas pelo
-// pagamento recorrente), mesmo já pago. Grava na mesma tabela que o Financeiro lê, então
-// a mudança aparece lá (contas a receber e fluxo de caixa) e na ficha do cliente.
-export default function EditarContaReceberManualModal({ conta, onClose }: Props) {
+// Edita uma conta a pagar em qualquer situação (pendente ou já paga).
+export default function EditarContaPagarModal({ conta, onClose }: Props) {
+  const fornecedores = useFornecedores()
   const { userEmail } = useAuth()
   const [descricao, setDescricao] = useState(conta.descricao)
+  const [fornecedorId, setFornecedorId] = useState(conta.fornecedorId ?? '')
+  const [categoria, setCategoria] = useState(conta.categoria)
   const [valor, setValor] = useState(conta.valor)
   const [vencimento, setVencimento] = useState(conta.vencimento)
   const [pago, setPago] = useState(conta.status === 'pago')
@@ -37,14 +39,16 @@ export default function EditarContaReceberManualModal({ conta, onClose }: Props)
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
-    await editarContaReceberManual(conta.id, {
+    await editarContaPagar(conta.id, {
       descricao: descricao.trim(),
+      fornecedorId: fornecedorId || undefined,
+      categoria: categoria.trim() || 'Geral',
       valor,
       vencimento,
       status: pago ? 'pago' : 'pendente',
       dataPagamento: pago ? dataPagamento || hoje() : undefined,
     })
-    registrarLog(userEmail ?? 'sistema', 'Cobrança editada', `${conta.clienteNome} — ${descricao.trim()}`)
+    registrarLog(userEmail ?? 'sistema', 'Conta a pagar editada', descricao.trim())
     onClose()
   }
 
@@ -53,16 +57,10 @@ export default function EditarContaReceberManualModal({ conta, onClose }: Props)
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-soft w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-ink-900">Editar cobrança</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            <X size={20} />
-          </button>
+          <h2 className="text-lg font-bold text-ink-900">Editar conta a pagar</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Cliente</label>
-            <input value={conta.clienteNome} disabled className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-slate-400 text-sm" />
-          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Descrição</label>
             <input
@@ -71,6 +69,27 @@ export default function EditarContaReceberManualModal({ conta, onClose }: Props)
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
             />
             {errors.descricao && <p className="text-xs text-rose-600 mt-1">{errors.descricao}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Fornecedor <span className="text-slate-400 font-normal">(opcional)</span></label>
+            <select
+              value={fornecedorId}
+              onChange={(e) => setFornecedorId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500 bg-white"
+            >
+              <option value="">Sem fornecedor</option>
+              {fornecedores.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Categoria</label>
+            <input
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -125,12 +144,8 @@ export default function EditarContaReceberManualModal({ conta, onClose }: Props)
             )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">
-              Cancelar
-            </button>
-            <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-card">
-              Salvar alterações
-            </button>
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+            <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-card">Salvar alterações</button>
           </div>
         </form>
       </div>

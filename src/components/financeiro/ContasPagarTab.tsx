@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { Plus, CheckCircle2, X, Search, Pencil } from 'lucide-react'
-import { useContasPagar, addContaPagar, darBaixaContaPagar, cancelarContaPagar, editarContaPagar } from '../../data/contaPagarStore'
+import { useContasPagar, addContaPagar, darBaixaContaPagar, cancelarContaPagar } from '../../data/contaPagarStore'
 import { useFornecedores } from '../../data/fornecedorStore'
 import type { ContaPagar, StatusConta } from '../../types'
 import MoneyInput from '../MoneyInput'
+import EditarContaPagarModal from '../EditarContaPagarModal'
 import PeriodoFiltro from './PeriodoFiltro'
 
 function mesMatch(dataStr: string, mes: Date | null) {
@@ -85,19 +86,6 @@ export default function ContasPagarTab() {
     cancelarContaPagar(c.id)
   }
 
-  function handleSalvarEdicao(e: React.FormEvent) {
-    e.preventDefault()
-    if (!editando) return
-    editarContaPagar(editando.id, {
-      descricao: editando.descricao,
-      fornecedorId: editando.fornecedorId || undefined,
-      categoria: editando.categoria,
-      valor: editando.valor,
-      vencimento: editando.vencimento,
-    })
-    setEditando(null)
-  }
-
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -152,19 +140,21 @@ export default function ContasPagarTab() {
                 </td>
                 <td className="px-4 py-3 text-right text-slate-700">{c.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td className="px-4 py-3">
-                  {c.status === 'pendente' && (
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => setEditando(c)} className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100" title="Editar">
-                        <Pencil size={16} />
-                      </button>
-                      <button onClick={() => darBaixaContaPagar(c.id)} className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50" title="Dar baixa">
-                        <CheckCircle2 size={16} />
-                      </button>
-                      <button onClick={() => handleCancelar(c)} className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50" title="Cancelar e excluir">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1 justify-end">
+                    <button onClick={() => setEditando(c)} className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100" title="Editar">
+                      <Pencil size={16} />
+                    </button>
+                    {c.status === 'pendente' && (
+                      <>
+                        <button onClick={() => darBaixaContaPagar(c.id)} className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50" title="Dar baixa">
+                          <CheckCircle2 size={16} />
+                        </button>
+                        <button onClick={() => handleCancelar(c)} className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50" title="Cancelar e excluir">
+                          <X size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -244,71 +234,7 @@ export default function ContasPagarTab() {
         </div>
       )}
 
-      {editando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setEditando(null)} />
-          <div className="relative bg-white rounded-2xl shadow-soft w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-ink-900">Editar conta a pagar</h2>
-              <button onClick={() => setEditando(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-            </div>
-            <form onSubmit={handleSalvarEdicao} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Descrição</label>
-                <input
-                  value={editando.descricao}
-                  onChange={(e) => setEditando({ ...editando, descricao: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Fornecedor <span className="text-slate-400 font-normal">(opcional)</span></label>
-                <select
-                  value={editando.fornecedorId ?? ''}
-                  onChange={(e) => setEditando({ ...editando, fornecedorId: e.target.value || undefined })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500 bg-white"
-                >
-                  <option value="">Sem fornecedor</option>
-                  {fornecedores.map((f) => (
-                    <option key={f.id} value={f.id}>{f.nome}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Categoria</label>
-                <input
-                  value={editando.categoria}
-                  onChange={(e) => setEditando({ ...editando, categoria: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor</label>
-                  <MoneyInput
-                    value={editando.valor}
-                    onChange={(v) => setEditando({ ...editando, valor: v })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Vencimento</label>
-                  <input
-                    type="date"
-                    value={editando.vencimento}
-                    onChange={(e) => setEditando({ ...editando, vencimento: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setEditando(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
-                <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-card">Salvar alterações</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {editando && <EditarContaPagarModal conta={editando} onClose={() => setEditando(null)} />}
     </div>
   )
 }

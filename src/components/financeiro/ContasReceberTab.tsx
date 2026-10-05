@@ -2,11 +2,14 @@ import React, { useMemo, useState } from 'react'
 import { CheckCircle2, Repeat, Search, FileText, Receipt, Loader2, ExternalLink, AlertCircle, Plus, X, Pencil, Trash2, PenLine } from 'lucide-react'
 import { useContasReceber, darBaixaContaReceber } from '../../data/receivableStore'
 import {
-  addContaReceberManual, editarContaReceberManual, darBaixaContaReceberManual, cancelarContaReceberManual,
+  addContaReceberManual, darBaixaContaReceberManual, cancelarContaReceberManual,
   useContasReceberManuais,
 } from '../../data/manualReceivableStore'
-import type { ContaReceberManual } from '../../types'
+import type { ContaReceberManual, Servico } from '../../types'
 import { useClientes } from '../../data/clienteStore'
+import { useServicos } from '../../data/servicoStore'
+import EditarContaReceberManualModal from '../EditarContaReceberManualModal'
+import EditarServicoModal from '../EditarServicoModal'
 import { useCobrancasAsaas, ultimaCobranca, refetchCobrancasAsaas } from '../../data/cobrancaAsaasStore'
 import { emitirBoleto, emitirNotaFiscal } from '../../data/asaasClient'
 import MoneyInput from '../MoneyInput'
@@ -25,6 +28,7 @@ export default function ContasReceberTab() {
   const contas = useContasReceber()
   const clientes = useClientes()
   const manuaisRaw = useContasReceberManuais()
+  const servicosTodos = useServicos()
   useCobrancasAsaas()
   const [filtro, setFiltro] = useState<'todos' | 'pendente' | 'pago'>('todos')
   const [busca, setBusca] = useState('')
@@ -37,6 +41,7 @@ export default function ContasReceberTab() {
   const [novoValor, setNovoValor] = useState(0)
   const [novoVencimento, setNovoVencimento] = useState('')
   const [editando, setEditando] = useState<ContaReceberManual | null>(null)
+  const [servicoEditando, setServicoEditando] = useState<Servico | null>(null)
 
   const contasDoPeriodo = useMemo(() => contas.filter((c) => mesMatch(c.vencimento, mesFiltro)), [contas, mesFiltro])
 
@@ -103,21 +108,17 @@ export default function ContasReceberTab() {
     cancelarContaReceberManual(manualId)
   }
 
-  function handleEditarManual(item: (typeof contas)[number]) {
-    const manualId = idManual(item.id)
-    const registro = manuaisRaw.find((m) => m.id === manualId)
-    if (registro) setEditando(registro)
-  }
-
-  function handleSalvarEdicao(e: React.FormEvent) {
-    e.preventDefault()
-    if (!editando) return
-    editarContaReceberManual(editando.id, {
-      descricao: editando.descricao,
-      valor: editando.valor,
-      vencimento: editando.vencimento,
-    })
-    setEditando(null)
+  // Lançamento manual abre o editor de cobrança; o que vem de um serviço abre o editor do
+  // serviço (valor, data, forma de pagamento, parcelas) — a mudança vale também na Agenda.
+  // Mensalidades recorrentes são projeções automáticas, não têm registro para editar.
+  function handleEditar(item: (typeof contas)[number]) {
+    if (item.origem === 'manual') {
+      const registro = manuaisRaw.find((m) => m.id === idManual(item.id))
+      if (registro) setEditando(registro)
+    } else if (item.origem === 'servico') {
+      const servico = servicosTodos.find((s) => s.id === item.servicoId)
+      if (servico) setServicoEditando(servico)
+    }
   }
 
   return (
@@ -252,8 +253,12 @@ export default function ContasReceberTab() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center gap-1 justify-end">
-                      {c.origem === 'manual' && (
-                        <button onClick={() => handleEditarManual(c)} className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100" title="Editar">
+                      {(c.origem === 'manual' || c.origem === 'servico') && (
+                        <button
+                          onClick={() => handleEditar(c)}
+                          className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
+                          title={c.origem === 'servico' ? 'Editar serviço (reflete na Agenda)' : 'Editar'}
+                        >
                           <Pencil size={16} />
                         </button>
                       )}
@@ -326,54 +331,8 @@ export default function ContasReceberTab() {
         </div>
       )}
 
-      {editando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setEditando(null)} />
-          <div className="relative bg-white rounded-2xl shadow-soft w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-ink-900">Editar conta a receber</h2>
-              <button onClick={() => setEditando(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-            </div>
-            <form onSubmit={handleSalvarEdicao} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Cliente</label>
-                <input value={editando.clienteNome} disabled className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-slate-400 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Descrição</label>
-                <input
-                  value={editando.descricao}
-                  onChange={(e) => setEditando({ ...editando, descricao: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Valor</label>
-                  <MoneyInput
-                    value={editando.valor}
-                    onChange={(v) => setEditando({ ...editando, valor: v })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Vencimento</label>
-                  <input
-                    type="date"
-                    value={editando.vencimento}
-                    onChange={(e) => setEditando({ ...editando, vencimento: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-brand-500"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setEditando(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
-                <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-card">Salvar alterações</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {editando && <EditarContaReceberManualModal conta={editando} onClose={() => setEditando(null)} />}
+      {servicoEditando && <EditarServicoModal servico={servicoEditando} onClose={() => setServicoEditando(null)} />}
     </div>
   )
 }

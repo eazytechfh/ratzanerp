@@ -224,6 +224,8 @@ export interface ContaReceberItem {
   vencimento: string
   status: StatusConta
   origem: 'servico' | 'recorrente' | 'manual'
+  /** Serviço de origem (quando origem = 'servico'), usado para editar o lançamento. */
+  servicoId?: string
   formaPagamento?: FormaPagamento
   tipoAtendimento?: TipoAtendimento
   parcela?: number
