@@ -14,9 +14,9 @@ interface Props {
   onClose: () => void
 }
 
-// Ao iniciar o serviço o operador tira a foto da fachada do local (abre a câmera do celular).
-// A foto é opcional para não travar o operador sem câmera/sinal — mas a falta dela fica
-// registrada no histórico do serviço.
+// Ao iniciar o serviço o operador TEM que tirar a foto da fachada do local (abre a câmera do
+// celular). Sem foto não dá para iniciar: o botão fica desabilitado, e a foto é gravada antes de
+// o serviço mudar de status, para nunca existir um serviço iniciado sem foto.
 export default function IniciarServicoModal({ servico, onClose }: Props) {
   const { userEmail, perfil } = useAuth()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -41,9 +41,22 @@ export default function IniciarServicoModal({ servico, onClose }: Props) {
   }
 
   async function handleIniciar() {
+    if (!foto) {
+      setErro('Tire a foto da fachada para iniciar o serviço.')
+      return
+    }
     setSalvando(true)
+    setErro('')
     const quem = perfil?.nome ?? userEmail ?? 'sistema'
     const hora = fmtHora(new Date())
+
+    // 1º a foto: se não gravar, o serviço não é iniciado.
+    const rFoto = await salvarFotoServico(servico.id, foto)
+    if (rFoto.error) {
+      setSalvando(false)
+      setErro('Não foi possível salvar a foto. Verifique a conexão e tente novamente — o serviço só inicia com a foto salva.')
+      return
+    }
 
     await updateServico(servico.id, { status: 'em_andamento', horaInicioReal: hora })
     // updateServico não devolve erro; se o serviço não mudou de status, não deu certo.
@@ -54,17 +67,7 @@ export default function IniciarServicoModal({ servico, onClose }: Props) {
     }
 
     registrarLog(userEmail ?? 'sistema', 'Serviço iniciado', `${servico.tipoServico} — ${servico.clienteNome} às ${hora}`)
-    await registrarEventoServico(
-      servico.id,
-      'inicio',
-      foto ? `Serviço iniciado às ${hora} (foto da fachada registrada)` : `Serviço iniciado às ${hora} (sem foto da fachada)`,
-      quem,
-    )
-
-    if (foto) {
-      const r = await salvarFotoServico(servico.id, foto)
-      if (r.error) alert('O serviço foi iniciado, mas não deu para salvar a foto da fachada. Tente tirar a foto novamente depois.')
-    }
+    await registrarEventoServico(servico.id, 'inicio', `Serviço iniciado às ${hora} (foto da fachada registrada)`, quem)
     onClose()
   }
 
@@ -119,13 +122,8 @@ export default function IniciarServicoModal({ servico, onClose }: Props) {
             )}
 
             <p className="text-xs text-slate-400 mt-2">
-              A foto fica guardada no histórico do serviço por {FOTO_RETENCAO_DIAS} dias.
+              A foto da fachada é obrigatória para iniciar o serviço e fica guardada no histórico por {FOTO_RETENCAO_DIAS} dias.
             </p>
-            {!foto && (
-              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-                Você pode iniciar sem a foto, mas isso fica registrado no histórico do serviço.
-              </p>
-            )}
             {erro && <p className="text-xs text-rose-600 mt-2">{erro}</p>}
           </div>
 
@@ -141,13 +139,12 @@ export default function IniciarServicoModal({ servico, onClose }: Props) {
             <button
               type="button"
               onClick={handleIniciar}
-              disabled={salvando || processando}
-              className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold shadow-card disabled:opacity-60 ${
-                foto ? 'text-white bg-indigo-600 hover:bg-indigo-700' : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
-              }`}
+              disabled={!foto || salvando || processando}
+              title={foto ? undefined : 'Tire a foto da fachada para poder iniciar'}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-card disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {salvando && <Loader2 size={15} className="animate-spin" />}
-              {foto ? 'Iniciar serviço' : 'Iniciar sem foto'}
+              Iniciar serviço
             </button>
           </div>
         </div>
