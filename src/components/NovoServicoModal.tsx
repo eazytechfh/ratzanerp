@@ -113,6 +113,8 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     if (!clienteId) errs.clienteId = 'Selecione um cliente'
     if (!dataAgendada) errs.dataAgendada = 'Informe a data'
     if (!valorDispensado && (!valor || Number(valor) <= 0)) errs.valor = 'Informe um valor válido'
+    if (!garantiaAte) errs.garantiaAte = 'Informe até quando vale a garantia'
+    else if (dataAgendada && garantiaAte < dataAgendada) errs.garantiaAte = 'A garantia não pode terminar antes da data do serviço'
     if (formaPagamento === 'boleto_pj' && parcelas > 1) {
       const incompleta = parcelasExtras.some((p) => !p.valor || Number(p.valor) <= 0 || !p.vencimento)
       if (incompleta) errs.parcelas = 'Preencha valor e data de pagamento de todas as parcelas'
@@ -499,13 +501,20 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Garantia até</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Garantia até <span className="text-rose-600">*</span>
+            </label>
             <input
               type="date"
               value={garantiaAte}
               onChange={(e) => setGarantiaAte(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+              className={`w-full px-3 py-2 rounded-lg border focus:ring-2 outline-none text-sm ${
+                errors.garantiaAte
+                  ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
+                  : 'border-slate-300 focus:border-brand-500 focus:ring-brand-100'
+              }`}
             />
+            {errors.garantiaAte && <p className="text-xs text-rose-600 mt-1">{errors.garantiaAte}</p>}
           </div>
 
           <div>
