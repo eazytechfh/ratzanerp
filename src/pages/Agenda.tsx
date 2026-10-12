@@ -65,6 +65,10 @@ export default function Agenda() {
   const [modalReagendar, setModalReagendar] = useState(false)
   const [modalEditar, setModalEditar] = useState(false)
   const googleConectado = useGoogleCalendarConectado(perfil?.id)
+  // A função de sincronização apaga a conexão quando o Google recusa renová-la (acesso expirado ou
+  // revogado). Isso só é descoberto no clique, então marcamos aqui para trocar "Sincronizar" por
+  // "Conectar" sem precisar recarregar a página.
+  const [googleDesconectado, setGoogleDesconectado] = useState(false)
   const [sincronizando, setSincronizando] = useState(false)
   const [servicoIniciando, setServicoIniciando] = useState<Servico | null>(null)
   const [justificando, setJustificando] = useState<{ servico: Servico; minutos: number } | null>(null)
@@ -99,6 +103,12 @@ export default function Agenda() {
     const resultado = await sincronizarGoogleCalendar(relevantes)
     setSincronizando(false)
     if (resultado.error) {
+      const erro = resultado.error.toLowerCase()
+      if (erro.includes('não conectado') || erro.includes('expirou') || erro.includes('revogad')) {
+        setGoogleDesconectado(true)
+        alert('A conexão com o Google Calendar expirou ou foi desfeita. Clique em "Conectar Google Calendar" e autorize novamente para voltar a sincronizar.')
+        return
+      }
       alert(`Falha ao sincronizar: ${resultado.error}`)
       return
     }
@@ -415,7 +425,7 @@ export default function Agenda() {
           <p className="text-slate-500 text-sm mt-0.5 capitalize">{tituloPeriodo}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start">
-          {googleConectado === false && (
+          {(googleConectado === false || googleDesconectado) && (
             <button
               onClick={() => perfil && conectarGoogleCalendar(perfil.id)}
               className="hidden sm:inline-flex items-center gap-2 px-3 h-9 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
@@ -424,7 +434,7 @@ export default function Agenda() {
               Conectar Google Calendar
             </button>
           )}
-          {googleConectado === true && (
+          {googleConectado === true && !googleDesconectado && (
             <button
               onClick={handleSincronizarGoogle}
               disabled={sincronizando}
