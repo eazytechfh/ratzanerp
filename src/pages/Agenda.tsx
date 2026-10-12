@@ -92,7 +92,9 @@ export default function Agenda() {
   }, [])
 
   async function handleSincronizarGoogle() {
-    const relevantes = servicos.filter((s) => s.status === 'agendado' || s.status === 'em_andamento' || s.status === 'cancelado')
+    // Usa a lista completa do perfil (sem o filtro de operador da tela) — filtrar a visualização
+    // não pode mudar o que é enviado ao Google Calendar.
+    const relevantes = servicosBase.filter((s) => s.status === 'agendado' || s.status === 'em_andamento' || s.status === 'cancelado')
     setSincronizando(true)
     const resultado = await sincronizarGoogleCalendar(relevantes)
     setSincronizando(false)
@@ -111,10 +113,28 @@ export default function Agenda() {
     return operadores.find((o) => o.id === perfil.operadorId)?.nome ?? null
   }, [perfil, operadores])
 
-  const servicos = useMemo(() => {
+  // O operador só enxerga os próprios serviços; os demais perfis veem todos.
+  const servicosBase = useMemo(() => {
     if (!meuNomeOperador) return servicosTodos
     return servicosTodos.filter((s) => s.operador === meuNomeOperador)
   }, [servicosTodos, meuNomeOperador])
+
+  // Filtro por operador (administrador e gerentes). Vazio = todos os operadores.
+  const podeFiltrarOperador = !!perfil && perfil.role !== 'operador'
+  const [filtroOperador, setFiltroOperador] = useState('')
+
+  // Operadores cadastrados + qualquer nome que apareça em serviço (ex.: operador renomeado/removido),
+  // para nenhum serviço ficar fora do filtro.
+  const opcoesOperador = useMemo(() => {
+    const nomes = new Set<string>(operadores.map((o) => o.nome))
+    servicosTodos.forEach((s) => s.operador && nomes.add(s.operador))
+    return [...nomes].sort((a, b) => a.localeCompare(b))
+  }, [operadores, servicosTodos])
+
+  const servicos = useMemo(() => {
+    if (!podeFiltrarOperador || !filtroOperador) return servicosBase
+    return servicosBase.filter((s) => s.operador === filtroOperador)
+  }, [servicosBase, podeFiltrarOperador, filtroOperador])
 
   const servicosPorData = useMemo(() => {
     const map = new Map<string, Servico[]>()
@@ -314,7 +334,7 @@ export default function Agenda() {
         })}
         {datas.every((d) => (servicosPorData.get(d) ?? []).length === 0) && (
           <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
-            Nenhum serviço agendado neste período.
+            {filtroOperador ? `Nenhum serviço de ${filtroOperador} neste período.` : 'Nenhum serviço agendado neste período.'}
           </div>
         )}
       </div>
@@ -413,6 +433,21 @@ export default function Agenda() {
               {sincronizando ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
               Sincronizar com Google Calendar
             </button>
+          )}
+          {podeFiltrarOperador && (
+            <select
+              value={filtroOperador}
+              onChange={(e) => setFiltroOperador(e.target.value)}
+              aria-label="Filtrar por operador"
+              className={`h-9 rounded-lg border text-sm px-3 bg-white outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 ${
+                filtroOperador ? 'border-brand-400 text-brand-700 font-medium' : 'border-slate-200 text-slate-600'
+              }`}
+            >
+              <option value="">Todos os operadores</option>
+              {opcoesOperador.map((nome) => (
+                <option key={nome} value={nome}>{nome}</option>
+              ))}
+            </select>
           )}
           <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
             {(['dia', 'semana', 'mes'] as Visao[]).map((v) => (
