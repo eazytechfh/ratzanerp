@@ -6,6 +6,8 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
   '/servicos': ['gerente_operacional', 'gerente_geral', 'administrador'],
   '/agenda': ['operador', 'gerente_operacional', 'gerente_geral', 'administrador'],
   '/equipe': ['gerente_operacional', 'gerente_geral', 'administrador'],
+  // Bonificações dos operadores: todos exceto o operador (por enquanto).
+  '/bonificacoes': ['gerente_operacional', 'gerente_geral', 'administrador'],
   '/fornecedores': ['gerente_operacional', 'gerente_geral', 'administrador'],
   '/financeiro': ['gerente_geral', 'administrador'],
   '/logs': ['administrador'],

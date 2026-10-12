@@ -13,6 +13,7 @@ import Equipe from './pages/Equipe'
 import Fornecedores from './pages/Fornecedores'
 import Financeiro from './pages/Financeiro'
 import Logs from './pages/Logs'
+import Bonificacoes from './pages/Bonificacoes'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/servicos/:id" element={<ServicoDetalhe />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/equipe" element={<Equipe />} />
+          <Route path="/bonificacoes" element={<Bonificacoes />} />
           <Route path="/fornecedores" element={<Fornecedores />} />
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/logs" element={<Logs />} />
