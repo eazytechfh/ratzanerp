@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil, AlertTriangle } from 'lucide-react'
-import { useServicos, removeServico } from '../data/servicoStore'
+import { useServicos, removeServico, updateServico, getServicoById } from '../data/servicoStore'
 import { useClientes } from '../data/clienteStore'
 import { useOperadores } from '../data/operadorStore'
 import { registrarLog } from '../data/logStore'
@@ -9,10 +9,8 @@ import { ServicoStatusBadge } from '../components/StatusBadge'
 import DarBaixaModal from '../components/DarBaixaModal'
 import ReagendarModal from '../components/ReagendarModal'
 import EditarServicoModal from '../components/EditarServicoModal'
-import IniciarServicoModal from '../components/IniciarServicoModal'
 import JustificarAtrasoModal from '../components/JustificarAtrasoModal'
-import { useEventosServico } from '../data/servicoEventoStore'
-import { purgarFotosExpiradas } from '../data/fotoServicoStore'
+import { useEventosServico, registrarEventoServico } from '../data/servicoEventoStore'
 import { situacaoDeAtraso, inicioRealDoServico, fmtHora, fmtDuracao } from '../lib/atraso'
 import { conectarGoogleCalendar, useGoogleCalendarConectado, sincronizarGoogleCalendar } from '../data/googleCalendarClient'
 import type { Servico } from '../types'
@@ -70,7 +68,7 @@ export default function Agenda() {
   // "Conectar" sem precisar recarregar a página.
   const [googleDesconectado, setGoogleDesconectado] = useState(false)
   const [sincronizando, setSincronizando] = useState(false)
-  const [servicoIniciando, setServicoIniciando] = useState<Servico | null>(null)
+  const [iniciandoId, setIniciandoId] = useState<string | null>(null)
   const [justificando, setJustificando] = useState<{ servico: Servico; minutos: number } | null>(null)
   const eventos = useEventosServico()
 
@@ -79,11 +77,6 @@ export default function Agenda() {
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), 30_000)
     return () => clearInterval(t)
-  }, [])
-
-  // As fotos de início de serviço só ficam 7 dias — apaga as vencidas ao abrir a Agenda.
-  useEffect(() => {
-    purgarFotosExpiradas()
   }, [])
 
   useEffect(() => {
@@ -168,9 +161,22 @@ export default function Agenda() {
     registrarLog(userEmail ?? 'sistema', 'Serviço cancelado', `${s.tipoServico} — ${s.clienteNome}`)
   }
 
-  // Iniciar abre o modal da foto da fachada; o início em si é gravado lá.
-  function handleIniciar(s: Servico) {
-    setServicoIniciando(s)
+  // Inicia o serviço com um toque: grava a hora real de início e registra no histórico do serviço
+  // (sem foto — a foto da fachada foi retirada porque enchia o armazenamento do banco).
+  async function handleIniciar(s: Servico) {
+    if (iniciandoId) return // evita toque duplo
+    setIniciandoId(s.id)
+    const hora = fmtHora(new Date())
+    await updateServico(s.id, { status: 'em_andamento', horaInicioReal: hora })
+    // updateServico não devolve erro; se o status não mudou, não deu certo.
+    if (getServicoById(s.id)?.status !== 'em_andamento') {
+      setIniciandoId(null)
+      alert('Não foi possível iniciar o serviço. Verifique a conexão e tente novamente.')
+      return
+    }
+    registrarLog(userEmail ?? 'sistema', 'Serviço iniciado', `${s.tipoServico} — ${s.clienteNome} às ${hora}`)
+    await registrarEventoServico(s.id, 'inicio', `Serviço iniciado às ${hora}`, perfil?.nome ?? userEmail ?? 'sistema')
+    setIniciandoId(null)
   }
 
   function handleExcluir(s: Servico) {
@@ -228,9 +234,10 @@ export default function Agenda() {
         {s.status === 'agendado' && (
           <button
             onClick={() => handleIniciar(s)}
-            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+            disabled={iniciandoId === s.id}
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-60"
           >
-            <PlayCircle size={13} /> Iniciar serviço
+            {iniciandoId === s.id ? <Loader2 size={13} className="animate-spin" /> : <PlayCircle size={13} />} Iniciar serviço
           </button>
         )}
         <button
@@ -405,7 +412,7 @@ export default function Agenda() {
       </div>
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visao, dataRef, servicosPorData, eventos, agora, perfil])
+  }, [visao, dataRef, servicosPorData, eventos, agora, perfil, iniciandoId])
 
   const tituloPeriodo = useMemo(() => {
     if (visao === 'dia') return dataRef.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
@@ -496,9 +503,6 @@ export default function Agenda() {
       )}
       {modalEditar && selecionado && (
         <EditarServicoModal servico={selecionado} onClose={() => { setModalEditar(false); setSelecionado(null) }} />
-      )}
-      {servicoIniciando && (
-        <IniciarServicoModal servico={servicoIniciando} onClose={() => setServicoIniciando(null)} />
       )}
       {justificando && (
         <JustificarAtrasoModal servico={justificando.servico} minutos={justificando.minutos} onClose={() => setJustificando(null)} />
