@@ -56,7 +56,8 @@ export default function Agenda() {
   const clientes = useClientes()
   const operadores = useOperadores()
   const { userEmail, perfil } = useAuth()
-  const [visao, setVisao] = useState<Visao>('semana')
+  // Ao abrir a Agenda, a visão inicial é o dia de hoje (semana e mês continuam a um clique).
+  const [visao, setVisao] = useState<Visao>('dia')
   const [dataRef, setDataRef] = useState(new Date())
   const [selecionado, setSelecionado] = useState<Servico | null>(null)
   const [modalBaixa, setModalBaixa] = useState(false)
