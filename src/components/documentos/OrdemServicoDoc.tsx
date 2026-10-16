@@ -1,8 +1,31 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Pencil, RotateCcw, CheckCheck } from 'lucide-react'
 import { OSHeader } from './RatzanHeader'
 import { getCategoriaById } from '../../data/categoriaStore'
 import type { Cliente, Servico } from '../../types'
+import { useAuth } from '../../context/AuthContext'
+import { descreverAlteracoes, registrarEdicaoDocumento } from '../../lib/edicaoDocumento'
+
+const ROTULOS: Record<keyof Dados, string> = {
+  dataServico: 'Data do serviço',
+  garantiaAte: 'Garantia até',
+  horaInicio: 'Hora início',
+  horaFim: 'Hora fim',
+  telefone: 'Telefone',
+  operador: 'Operador',
+  clienteNome: 'Nome do cliente',
+  email: 'E-mail',
+  endereco: 'Endereço',
+  bairro: 'Bairro',
+  valor: 'Valor',
+  formaPagamento: 'Forma de pagamento',
+  tipoServico: 'Serviço contratado',
+  pragas: 'Pragas',
+  categoria: 'Categoria',
+  aplicacao: 'Aplicação',
+  observacoes: 'Observações',
+  atendente: 'Atendente',
+}
 
 interface Props {
   servico: Servico
@@ -97,17 +120,39 @@ export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props)
   const [dados, setDados] = useState<Dados>(original)
   const [editando, setEditando] = useState(false)
   const [alterado, setAlterado] = useState(false)
+  const { userEmail, perfil } = useAuth()
+  // Última versão já registrada no Log, para não repetir a mesma edição.
+  const registrado = useRef<Dados>(original)
+  const dadosRef = useRef(dados)
+  dadosRef.current = dados
+
+  const registrarAlteracoes = () => {
+    const alteracoes = descreverAlteracoes(registrado.current, dadosRef.current, ROTULOS)
+    if (alteracoes.length === 0) return
+    registrarEdicaoDocumento(perfil?.nome ?? userEmail ?? 'sistema', 'Ordem de Serviço', `${servico.tipoServico} — ${servico.clienteNome}`, alteracoes)
+    registrado.current = dadosRef.current
+  }
+  const registrarRef = useRef(registrarAlteracoes)
+  registrarRef.current = registrarAlteracoes
+
+  // Imprimir/salvar PDF com a edição ainda aberta também conta como uso do documento editado.
+  useEffect(() => {
+    const handler = () => registrarRef.current()
+    window.addEventListener('beforeprint', handler)
+    return () => window.removeEventListener('beforeprint', handler)
+  }, [])
 
   // Trocou de serviço: volta à OS original.
   useEffect(() => {
     setDados(original)
+    registrado.current = original
     setEditando(false)
     setAlterado(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [servico.id])
 
   const set = (k: keyof Dados, v: string) => { setDados((d) => ({ ...d, [k]: v })); setAlterado(true) }
-  const restaurar = () => { setDados(original); setAlterado(false); setEditando(false) }
+  const restaurar = () => { setDados(original); registrado.current = original; setAlterado(false); setEditando(false) }
   const inp = (k: keyof Dados, type = 'text') => (
     <input type={type} value={dados[k]} onChange={(e) => set(k, e.target.value)} className={inputCls} />
   )
@@ -124,7 +169,7 @@ export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props)
       {podeEditar && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           {editando ? (
-            <button onClick={() => setEditando(false)} className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3.5 py-2 rounded-lg transition">
+            <button onClick={() => { setEditando(false); registrarAlteracoes() }} className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3.5 py-2 rounded-lg transition">
               <CheckCheck size={15} /> Concluir edição
             </button>
           ) : (
