@@ -166,7 +166,7 @@ export default function ServicoDetalhe() {
         </div>
       )}
 
-      {aba === 'os' && documentosLiberados && <OrdemServicoDoc servico={servico} cliente={cliente} />}
+      {aba === 'os' && documentosLiberados && <OrdemServicoDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} />}
       {aba === 'certificado' && certificadoLiberado && <CertificadoGarantiaDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} />}
       {aba === 'aviso' && <AvisoDoc servico={servico} />}
     </div>
