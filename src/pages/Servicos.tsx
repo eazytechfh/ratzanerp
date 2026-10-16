@@ -52,6 +52,7 @@ export default function Servicos() {
   const [tiposPragaOpen, setTiposPragaOpen] = useState(false)
   // 'todas' | 'pagos' | 'reforco' | uma forma de pagamento específica
   const [filtroPagamento, setFiltroPagamento] = useState<string>('todas')
+  const [filtroOperador, setFiltroOperador] = useState('todos')
   const [ordem, setOrdem] = useState<'desc' | 'asc'>('desc')
   // Abre já no mês atual; "Todos os períodos" volta a mostrar tudo.
   const [mesFiltro, setMesFiltro] = useState<Date | null>(() => new Date())
@@ -62,21 +63,32 @@ export default function Servicos() {
 
   const doPeriodo = useMemo(() => servicos.filter((s) => mesMatch(s.dataAgendada, mesFiltro)), [servicos, mesFiltro])
 
+  const operadores = useMemo(
+    () => Array.from(new Set(servicos.map((s) => s.operador).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [servicos],
+  )
+
+  // Tudo menos o status: período + operador + pagamento + busca. As contagens dos botões de status
+  // e o resumo acompanham esses filtros.
+  const base = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    return doPeriodo.filter((s) => {
+      const matchBusca =
+        !q ||
+        s.clienteNome.toLowerCase().includes(q) ||
+        s.tipoServico.toLowerCase().includes(q) ||
+        s.operador.toLowerCase().includes(q)
+      const matchOperador = filtroOperador === 'todos' || s.operador === filtroOperador
+      const matchPagamento =
+        filtroPagamento === 'todas' ||
+        (filtroPagamento === 'reforco' ? ehReforco(s) : filtroPagamento === 'pagos' ? !ehReforco(s) : s.formaPagamento === filtroPagamento)
+      return matchBusca && matchOperador && matchPagamento
+    })
+  }, [doPeriodo, busca, filtroOperador, filtroPagamento])
+
   const filtrados = useMemo(() => {
-    return doPeriodo
-      .filter((s) => {
-        const matchStatus = filtro === 'todos' || s.status === filtro
-        const q = busca.trim().toLowerCase()
-        const matchBusca =
-          !q ||
-          s.clienteNome.toLowerCase().includes(q) ||
-          s.tipoServico.toLowerCase().includes(q) ||
-          s.operador.toLowerCase().includes(q)
-        const matchPagamento =
-          filtroPagamento === 'todas' ||
-          (filtroPagamento === 'reforco' ? ehReforco(s) : filtroPagamento === 'pagos' ? !ehReforco(s) : s.formaPagamento === filtroPagamento)
-        return matchStatus && matchBusca && matchPagamento
-      })
+    return base
+      .filter((s) => filtro === 'todos' || s.status === filtro)
       .sort((a, b) => {
         const chaveA = `${a.dataAgendada} ${a.horaAgendada}`
         const chaveB = `${b.dataAgendada} ${b.horaAgendada}`
@@ -84,16 +96,21 @@ export default function Servicos() {
         const maiorPrimeiro = chaveA < chaveB ? 1 : -1
         return ordem === 'desc' ? maiorPrimeiro : -maiorPrimeiro
       })
-  }, [doPeriodo, filtro, busca, ordem, filtroPagamento])
+  }, [base, filtro, ordem])
 
-  // As contagens dos filtros de status acompanham o período escolhido.
   const counts = useMemo(() => {
-    const c: Record<FiltroStatus, number> = { todos: doPeriodo.length, agendado: 0, em_andamento: 0, concluido: 0, cancelado: 0 }
-    doPeriodo.forEach((s) => {
+    const c: Record<FiltroStatus, number> = { todos: base.length, agendado: 0, em_andamento: 0, concluido: 0, cancelado: 0 }
+    base.forEach((s) => {
       c[s.status] += 1
     })
     return c
-  }, [doPeriodo])
+  }, [base])
+
+  // Resumo do que está na lista agora (com todos os filtros aplicados).
+  const resumo = useMemo(() => {
+    const reforcos = filtrados.filter(ehReforco).length
+    return { total: filtrados.length, reforcos, pagos: filtrados.length - reforcos }
+  }, [filtrados])
 
   return (
     <div className="space-y-5">
@@ -134,7 +151,7 @@ export default function Servicos() {
       <PeriodoFiltro mes={mesFiltro} onChange={setMesFiltro} />
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-card">
-        <div className="p-4 flex flex-col sm:flex-row gap-3 border-b border-slate-100">
+        <div className="p-4 flex flex-col lg:flex-row gap-3 border-b border-slate-100">
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -144,6 +161,17 @@ export default function Servicos() {
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
             />
           </div>
+          <select
+            value={filtroOperador}
+            onChange={(e) => setFiltroOperador(e.target.value)}
+            className="shrink-0 px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none"
+            title="Filtrar por operador"
+          >
+            <option value="todos">Todos os operadores</option>
+            {operadores.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
           <select
             value={filtroPagamento}
             onChange={(e) => setFiltroPagamento(e.target.value)}
@@ -172,6 +200,12 @@ export default function Servicos() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
+          <span><strong className="text-ink-900">{resumo.total}</strong> serviço(s) na lista</span>
+          <span><strong className="text-ink-900">{resumo.pagos}</strong> pago(s)</span>
+          <span><strong className="text-amber-700">{resumo.reforcos}</strong> reforço/garantia</span>
         </div>
 
         <div className="overflow-x-auto">
