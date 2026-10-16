@@ -7,7 +7,7 @@ import NovoServicoModal from '../components/NovoServicoModal'
 import TiposServicoModal from '../components/TiposServicoModal'
 import TiposPragaModal from '../components/TiposPragaModal'
 import PeriodoFiltro from '../components/financeiro/PeriodoFiltro'
-import type { StatusServico } from '../types'
+import type { Servico, StatusServico } from '../types'
 
 type FiltroStatus = 'todos' | StatusServico
 
@@ -15,6 +15,20 @@ const MONTH_LABELS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ]
+
+const FORMA_LABEL: Record<Servico['formaPagamento'], string> = {
+  pix: 'Pix',
+  transferencia: 'Transferência',
+  debito: 'Débito',
+  credito: 'Crédito',
+  boleto_pj: 'Boleto PJ',
+  garantia: 'Garantia',
+  dinheiro: 'Dinheiro',
+  incluso_no_contrato: 'Incluso no Contrato',
+}
+
+// Reforço/garantia: atendimento de reforço ou pago pela garantia (não gera cobrança nova).
+const ehReforco = (s: Servico) => s.tipoAtendimento === 'reforco' || s.formaPagamento === 'garantia'
 
 function mesMatch(dataStr: string, mes: Date | null) {
   if (!mes) return true
@@ -36,6 +50,8 @@ export default function Servicos() {
   const [modalOpen, setModalOpen] = useState(false)
   const [tiposOpen, setTiposOpen] = useState(false)
   const [tiposPragaOpen, setTiposPragaOpen] = useState(false)
+  // 'todas' | 'pagos' | 'reforco' | uma forma de pagamento específica
+  const [filtroPagamento, setFiltroPagamento] = useState<string>('todas')
   const [ordem, setOrdem] = useState<'desc' | 'asc'>('desc')
   // Abre já no mês atual; "Todos os períodos" volta a mostrar tudo.
   const [mesFiltro, setMesFiltro] = useState<Date | null>(() => new Date())
@@ -56,7 +72,10 @@ export default function Servicos() {
           s.clienteNome.toLowerCase().includes(q) ||
           s.tipoServico.toLowerCase().includes(q) ||
           s.operador.toLowerCase().includes(q)
-        return matchStatus && matchBusca
+        const matchPagamento =
+          filtroPagamento === 'todas' ||
+          (filtroPagamento === 'reforco' ? ehReforco(s) : filtroPagamento === 'pagos' ? !ehReforco(s) : s.formaPagamento === filtroPagamento)
+        return matchStatus && matchBusca && matchPagamento
       })
       .sort((a, b) => {
         const chaveA = `${a.dataAgendada} ${a.horaAgendada}`
@@ -65,7 +84,7 @@ export default function Servicos() {
         const maiorPrimeiro = chaveA < chaveB ? 1 : -1
         return ordem === 'desc' ? maiorPrimeiro : -maiorPrimeiro
       })
-  }, [doPeriodo, filtro, busca, ordem])
+  }, [doPeriodo, filtro, busca, ordem, filtroPagamento])
 
   // As contagens dos filtros de status acompanham o período escolhido.
   const counts = useMemo(() => {
@@ -125,6 +144,19 @@ export default function Servicos() {
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
             />
           </div>
+          <select
+            value={filtroPagamento}
+            onChange={(e) => setFiltroPagamento(e.target.value)}
+            className="shrink-0 px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none"
+            title="Filtrar por forma de pagamento"
+          >
+            <option value="todas">Todas as formas</option>
+            <option value="pagos">Serviços pagos</option>
+            <option value="reforco">Reforço / Garantia</option>
+            {(Object.keys(FORMA_LABEL) as Servico['formaPagamento'][]).map((k) => (
+              <option key={k} value={k}>{FORMA_LABEL[k]}</option>
+            ))}
+          </select>
           <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {FILTROS.map((f) => (
               <button
@@ -159,6 +191,7 @@ export default function Servicos() {
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium hidden md:table-cell">Serviço</th>
                 <th className="px-4 py-3 font-medium hidden lg:table-cell">Operador</th>
+                <th className="px-4 py-3 font-medium hidden md:table-cell">Pagamento</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">Valor</th>
                 <th className="px-4 py-3" />
@@ -178,6 +211,10 @@ export default function Servicos() {
                   <td className="px-4 py-3 font-medium text-ink-900">{s.clienteNome}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-slate-600">{s.tipoServico}</td>
                   <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{s.operador}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-slate-600 whitespace-nowrap">
+                    {FORMA_LABEL[s.formaPagamento]}
+                    {ehReforco(s) && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">Reforço</span>}
+                  </td>
                   <td className="px-4 py-3"><ServicoStatusBadge status={s.status} /></td>
                   <td className="px-4 py-3 text-right text-slate-700">
                     {s.contabilizarReceita ? (
@@ -191,7 +228,7 @@ export default function Servicos() {
               ))}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                     Nenhum serviço encontrado com esses filtros.
                     {mesFiltro && servicos.length > 0 && (
                       <span className="block text-xs mt-1">
