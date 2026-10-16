@@ -1,23 +1,40 @@
-import React from 'react'
-import { Check } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Check, Pencil, RotateCcw, CheckCheck } from 'lucide-react'
 import { CertificadoHeader } from './RatzanHeader'
 import type { Cliente, Servico } from '../../types'
 
 interface Props {
   servico: Servico
   cliente?: Cliente
+  // Gerentes e administrador podem ajustar o certificado antes de baixar/enviar.
+  // A edição vale só para esta tela (e para o PDF/impressão) — não altera o serviço salvo.
+  podeEditar?: boolean
 }
+
+interface Dados {
+  clienteNome: string
+  endereco: string
+  bairro: string
+  tipoServico: string
+  dataServico: string
+  garantiaAte: string
+  horaInicio: string
+  horaFim: string
+  pragas: string
+}
+
+const inputCls = 'w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500'
 
 function fmtData(dataStr?: string) {
   if (!dataStr) return '-'
   return new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR')
 }
 
-function Campo({ label, value }: { label: string; value: React.ReactNode }) {
+function Campo({ label, value, edit }: { label: string; value: React.ReactNode; edit?: React.ReactNode }) {
   return (
     <div className="mb-3">
       <p className="text-xs font-bold text-ink-900">{label}</p>
-      <p className="text-sm text-slate-700 mt-0.5">{value}</p>
+      {edit ? <div className="mt-0.5">{edit}</div> : <p className="text-sm text-slate-700 mt-0.5">{value}</p>}
     </div>
   )
 }
@@ -40,30 +57,94 @@ function ChecklistLinha({ label, itens }: { label: string; itens: string[] }) {
   )
 }
 
-export default function CertificadoGarantiaDoc({ servico, cliente }: Props) {
+export default function CertificadoGarantiaDoc({ servico, cliente, podeEditar }: Props) {
   const baixa = servico.baixa
-  const dataServico = baixa?.dataServico ?? servico.dataAgendada
-  const garantiaAte = baixa?.garantiaAte
-  const horaInicio = baixa?.horaInicio ?? servico.horaInicioReal ?? servico.horaAgendada
-  const horaFim = baixa?.horaFim
-  const pragas = (baixa?.pragas ?? servico.pragas)
+  const original: Dados = {
+    clienteNome: servico.clienteNome,
+    endereco: servico.endereco || '',
+    bairro: cliente?.bairro ?? '',
+    tipoServico: servico.tipoServico,
+    dataServico: baixa?.dataServico ?? servico.dataAgendada,
+    garantiaAte: baixa?.garantiaAte ?? '',
+    horaInicio: baixa?.horaInicio ?? servico.horaInicioReal ?? servico.horaAgendada,
+    horaFim: baixa?.horaFim ?? '',
+    pragas: (baixa?.pragas ?? servico.pragas).join(', '),
+  }
+  const [dados, setDados] = useState<Dados>(original)
+  const [editando, setEditando] = useState(false)
+  const [alterado, setAlterado] = useState(false)
+
+  // Trocou de serviço: volta ao certificado original.
+  useEffect(() => {
+    setDados(original)
+    setEditando(false)
+    setAlterado(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [servico.id])
+
+  const set = (k: keyof Dados, v: string) => { setDados((d) => ({ ...d, [k]: v })); setAlterado(true) }
+  const restaurar = () => { setDados(original); setAlterado(false); setEditando(false) }
+
+  const listaPragas = dados.pragas.split(',').map((p) => p.trim()).filter(Boolean)
+  const horario = `${dados.horaInicio}${dados.horaFim ? ` - ${dados.horaFim}` : ''}`
+  const txt = (k: keyof Dados, type = 'text') => (
+    <input type={type} value={dados[k]} onChange={(e) => set(k, e.target.value)} className={inputCls} />
+  )
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-4 max-w-3xl mx-auto print:rounded-none print:border-0 print:shadow-none print:max-w-none print:mx-0">
+    <div className="space-y-3 max-w-3xl mx-auto print:max-w-none print:mx-0">
+      {podeEditar && (
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          {editando ? (
+            <button onClick={() => setEditando(false)} className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3.5 py-2 rounded-lg transition">
+              <CheckCheck size={15} /> Concluir edição
+            </button>
+          ) : (
+            <button onClick={() => setEditando(true)} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-3.5 py-2 rounded-lg shadow-card transition">
+              <Pencil size={15} /> Editar certificado
+            </button>
+          )}
+          {alterado && (
+            <button onClick={restaurar} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-ink-900 px-2 py-2 transition">
+              <RotateCcw size={14} /> Restaurar original
+            </button>
+          )}
+          <p className="text-xs text-slate-400 basis-full sm:basis-auto">
+            A edição vale só para este certificado: depois use "Imprimir / Salvar PDF" e envie manualmente. Os dados do serviço não são alterados.
+          </p>
+        </div>
+      )}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-4 print:rounded-none print:border-0 print:shadow-none">
       <CertificadoHeader />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
         <div>
-          <Campo label="Nome do Cliente ou Estabelecimento:" value={servico.clienteNome} />
-          <Campo label="Endereço do Serviço:" value={servico.endereco || '-'} />
-          <Campo label="Bairro:" value={cliente?.bairro ?? '-'} />
-          <ChecklistLinha label="Serviço Contratado:" itens={[servico.tipoServico]} />
+          <Campo label="Nome do Cliente ou Estabelecimento:" value={dados.clienteNome} edit={editando && txt('clienteNome')} />
+          <Campo label="Endereço do Serviço:" value={dados.endereco || '-'} edit={editando && txt('endereco')} />
+          <Campo label="Bairro:" value={dados.bairro || '-'} edit={editando && txt('bairro')} />
+          {editando ? (
+            <Campo label="Serviço Contratado:" value="" edit={txt('tipoServico')} />
+          ) : (
+            <ChecklistLinha label="Serviço Contratado:" itens={[dados.tipoServico]} />
+          )}
         </div>
         <div>
-          <Campo label="Data do Serviço:" value={fmtData(dataServico)} />
-          <Campo label="Garantia do Serviço:" value={fmtData(garantiaAte)} />
-          <Campo label="Horário:" value={`${horaInicio}${horaFim ? ` - ${horaFim}` : ''}`} />
-          <ChecklistLinha label="Praga:" itens={pragas.length > 0 ? pragas : ['-']} />
+          <Campo label="Data do Serviço:" value={fmtData(dados.dataServico)} edit={editando && txt('dataServico', 'date')} />
+          <Campo label="Garantia do Serviço:" value={fmtData(dados.garantiaAte)} edit={editando && txt('garantiaAte', 'date')} />
+          <Campo
+            label="Horário:"
+            value={horario}
+            edit={editando && (
+              <div className="flex items-center gap-2">
+                {txt('horaInicio', 'time')}<span className="text-slate-400">-</span>{txt('horaFim', 'time')}
+              </div>
+            )}
+          />
+          {editando ? (
+            <Campo label="Praga (separe por vírgula):" value="" edit={txt('pragas')} />
+          ) : (
+            <ChecklistLinha label="Praga:" itens={listaPragas.length > 0 ? listaPragas : ['-']} />
+          )}
         </div>
       </div>
 
@@ -93,6 +174,7 @@ export default function CertificadoGarantiaDoc({ servico, cliente }: Props) {
           </p>
           <p className="text-xs font-semibold text-ink-900 mt-2">Ratzan Controle de Pragas</p>
         </div>
+      </div>
       </div>
     </div>
   )

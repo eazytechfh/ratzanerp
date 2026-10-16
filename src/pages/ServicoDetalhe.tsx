@@ -7,6 +7,7 @@ import { ServicoStatusBadge } from '../components/StatusBadge'
 import OrdemServicoDoc from '../components/documentos/OrdemServicoDoc'
 import CertificadoGarantiaDoc from '../components/documentos/CertificadoGarantiaDoc'
 import AvisoDoc from '../components/documentos/AvisoDoc'
+import { useAuth } from '../context/AuthContext'
 import HistoricoServico from '../components/HistoricoServico'
 
 type Aba = 'detalhes' | 'os' | 'certificado' | 'aviso'
@@ -28,6 +29,7 @@ export default function ServicoDetalhe() {
   const clientes = useClientes()
   const servico = servicos.find((s) => s.id === id)
   const cliente = clientes.find((c) => c.id === servico?.clienteId)
+  const { perfil } = useAuth()
   const [aba, setAba] = useState<Aba>('detalhes')
 
   if (!servico) {
@@ -165,7 +167,7 @@ export default function ServicoDetalhe() {
       )}
 
       {aba === 'os' && documentosLiberados && <OrdemServicoDoc servico={servico} cliente={cliente} />}
-      {aba === 'certificado' && certificadoLiberado && <CertificadoGarantiaDoc servico={servico} cliente={cliente} />}
+      {aba === 'certificado' && certificadoLiberado && <CertificadoGarantiaDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} />}
       {aba === 'aviso' && <AvisoDoc servico={servico} />}
     </div>
   )
