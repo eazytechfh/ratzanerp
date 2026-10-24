@@ -67,10 +67,32 @@ export default function Dashboard() {
   const kpis = useMemo(() => {
     const total = clientes.length
     const ativos = clientes.filter((c) => c.status === 'ativo').length
-    const aVencer = clientes.filter((c) => c.status === 'vencendo').length
-    const vencidos = clientes.filter((c) => c.status === 'vencido').length
-    return { total, ativos, aVencer, vencidos }
+    return { total, ativos }
   }, [clientes])
+
+  // Garantias: vale a garantia mais recente de cada cliente (um serviço novo renova a anterior).
+  const garantias = useMemo(() => {
+    const maisRecente = new Map<string, string>()
+    servicos.forEach((s) => {
+      if (s.status === 'cancelado') return
+      const ate = s.baixa?.garantiaAte ?? s.garantiaAte
+      if (!ate) return
+      const atual = maisRecente.get(s.clienteId)
+      if (!atual || ate > atual) maisRecente.set(s.clienteId, ate)
+    })
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const hojeStr = fmt(hoje)
+    const limite = new Date(hoje)
+    limite.setDate(limite.getDate() + 30)
+    const limiteStr = fmt(limite)
+    let aVencer = 0
+    let vencidas = 0
+    maisRecente.forEach((ate) => {
+      if (ate < hojeStr) vencidas += 1
+      else if (ate <= limiteStr) aVencer += 1
+    })
+    return { aVencer, vencidas }
+  }, [servicos, hoje])
 
   function irParaClientes(status?: StatusCliente) {
     navigate(status ? `/clientes?status=${status}` : '/clientes')
@@ -154,12 +176,8 @@ export default function Dashboard() {
         <button onClick={() => irParaClientes('ativo')} className="text-left w-full">
           <KpiCard label="Clientes ativos" value={kpis.ativos} icon={UserCheck} tone="green" />
         </button>
-        <button onClick={() => irParaClientes('vencendo')} className="text-left w-full">
-          <KpiCard label="Contratos a vencer" value={kpis.aVencer} icon={CalendarClock} tone="amber" hint="Próximos 30 dias" />
-        </button>
-        <button onClick={() => irParaClientes('vencido')} className="text-left w-full">
-          <KpiCard label="Contratos vencidos" value={kpis.vencidos} icon={CalendarX} tone="red" />
-        </button>
+        <KpiCard label="Garantias a vencer" value={garantias.aVencer} icon={CalendarClock} tone="amber" hint="Próximos 30 dias" />
+        <KpiCard label="Garantias vencidas" value={garantias.vencidas} icon={CalendarX} tone="red" />
       </div>
 
       {alertas.some((a) => !a.concluido) && (

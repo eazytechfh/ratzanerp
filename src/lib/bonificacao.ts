@@ -14,6 +14,8 @@ import { situacaoDeAtraso } from './atraso'
 // REFORÇOS — bônus do mês conforme a quantidade de reforços feitos no mês:
 //  0 → R$ 350 · 1 → R$ 300 · 2 → R$ 250 · 3 → R$ 150 · 4 ou mais → R$ 0 (a tabela só vai até 3).
 //  - Reforço = serviço agendado como Reforço/Garantia OU marcado como Reforço na baixa.
+//  - O reforço por Garantia conta para o "Operador da Ocorrência" (quem fez o serviço original),
+//    não para quem executou o reforço — assim quem corrige o serviço de outro não é prejudicado.
 //  - Serviços cancelados não contam. Mês sem nenhum serviço do operador não gera o bônus.
 // ---------------------------------------------------------------------------------------
 
@@ -30,6 +32,18 @@ export const TABELA_REFORCO: { qtd: string; valor: number }[] = [
   { qtd: '2 reforços', valor: 250 },
   { qtd: '3 reforços', valor: 150 },
 ]
+
+// Operadores que ficam de fora da bonificação (comparação sem acento/maiúscula, pelo primeiro nome).
+const FORA_DA_BONIFICACAO = ['humberto']
+
+function normalizar(t: string): string {
+  return t.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+}
+
+export function participaDaBonificacao(nome: string): boolean {
+  const primeiro = normalizar(nome).split(/s+/)[0]
+  return !FORA_DA_BONIFICACAO.includes(primeiro)
+}
 
 export function ehReforco(s: Servico): boolean {
   return s.tipoAtendimento === 'reforco' || s.baixa?.aplicacao === 'reforco'
@@ -132,7 +146,14 @@ export function calcularBonusOperador(
 
   const chaveMes = `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
   const doMes = servicosOp.filter((s) => s.status !== 'cancelado' && s.dataAgendada.startsWith(chaveMes))
-  const reforcos = doMes.filter(ehReforco)
+  // Reforços do mês atribuídos a este operador: se há Operador da Ocorrência, é ele quem arca; senão, quem executou.
+  const reforcos = servicos.filter(
+    (s) =>
+      s.status !== 'cancelado' &&
+      s.dataAgendada.startsWith(chaveMes) &&
+      ehReforco(s) &&
+      (s.operadorOcorrencia || s.operador) === operador.nome,
+  )
   const valorReforco = doMes.length === 0 ? 0 : bonusReforco(reforcos.length)
   const valorPontualidade = semanasElegiveis * BONUS_SEMANA
 

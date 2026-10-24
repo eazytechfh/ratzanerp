@@ -8,6 +8,7 @@ import {
   BONUS_SEMANA,
   TABELA_REFORCO,
   calcularBonusOperador,
+  participaDaBonificacao,
   type BonusOperador,
   type SemanaBonus,
   type StatusSemana,
@@ -222,6 +223,7 @@ export default function Bonificacoes() {
   const resultados = useMemo(
     () =>
       [...operadores]
+        .filter((o) => participaDaBonificacao(o.nome))
         .sort((a, b) => a.nome.localeCompare(b.nome))
         .map((o) => calcularBonusOperador(o, servicos, eventos, mes, agora)),
     [operadores, servicos, eventos, mes, agora],

@@ -25,6 +25,8 @@ interface ServicoRow {
   maquininha: string | null
   parcelas_detalhe: Servico['parcelasDetalhe'] | null
   baixa: Servico['baixa'] | null
+  // Opcional: só é enviada quando preenchida (assim o app não depende da migration 018 até ser usada).
+  operador_ocorrencia?: string | null
 }
 
 function fromRow(r: ServicoRow): Servico {
@@ -52,6 +54,7 @@ function fromRow(r: ServicoRow): Servico {
     maquininha: (r.maquininha as Servico['maquininha']) ?? undefined,
     parcelasDetalhe: r.parcelas_detalhe ?? undefined,
     baixa: r.baixa ?? undefined,
+    operadorOcorrencia: r.operador_ocorrencia ?? undefined,
   }
 }
 
@@ -80,6 +83,7 @@ function toRow(s: Servico): ServicoRow {
     maquininha: s.maquininha ?? null,
     parcelas_detalhe: s.parcelasDetalhe ?? null,
     baixa: s.baixa ?? null,
+    ...(s.operadorOcorrencia ? { operador_ocorrencia: s.operadorOcorrencia } : {}),
   }
 }
 

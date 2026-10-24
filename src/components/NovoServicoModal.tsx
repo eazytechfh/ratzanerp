@@ -45,6 +45,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
   useEffect(() => {
     if (!operador && operadores.length > 0) setOperador(operadores[0].nome)
   }, [operadores, operador])
+  const [operadorOcorrencia, setOperadorOcorrencia] = useState('')
   const [dataAgendada, setDataAgendada] = useState('')
   const [horaAgendada, setHoraAgendada] = useState('09:00')
   const [valor, setValor] = useState('')
@@ -112,6 +113,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     const errs: Record<string, string> = {}
     if (!clienteId) errs.clienteId = 'Selecione um cliente'
     if (!dataAgendada) errs.dataAgendada = 'Informe a data'
+    if (formaPagamento === 'garantia' && !operadorOcorrencia) errs.operadorOcorrencia = 'Informe o operador da ocorrência'
     if (!valorDispensado && (!valor || Number(valor) <= 0)) errs.valor = 'Informe um valor válido'
     if (!garantiaAte) errs.garantiaAte = 'Informe até quando vale a garantia'
     else if (dataAgendada && garantiaAte < dataAgendada) errs.garantiaAte = 'A garantia não pode terminar antes da data do serviço'
@@ -165,6 +167,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
         parcelas: ehPrimeiro && (formaPagamento === 'credito' || formaPagamento === 'boleto_pj') ? parcelas : undefined,
         contabilizarReceita: ehPrimeiro && formaPagamento !== 'garantia' && formaPagamento !== 'incluso_no_contrato',
         garantiaAte: garantiaAte || undefined,
+        operadorOcorrencia: ehPrimeiro && formaPagamento === 'garantia' ? operadorOcorrencia : undefined,
         maquininha: ehPrimeiro && (formaPagamento === 'credito' || formaPagamento === 'debito') ? maquininha : undefined,
         parcelasDetalhe: ehPrimeiro ? parcelasDetalhe : undefined,
       }
@@ -378,6 +381,29 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
               <p className="text-xs text-amber-600 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 Serviço em garantia não é lançado no contas a receber e é contabilizado como Reforço.
               </p>
+            )}
+            {formaPagamento === 'garantia' && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Operador da Ocorrência <span className="text-rose-600">*</span>
+                </label>
+                <select
+                  value={operadorOcorrencia}
+                  onChange={(e) => setOperadorOcorrencia(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white ${
+                    errors.operadorOcorrencia ? 'border-rose-400' : 'border-slate-300 focus:border-brand-500'
+                  }`}
+                >
+                  <option value="">Selecione...</option>
+                  {operadores.map((o) => (
+                    <option key={o.id} value={o.nome}>{o.nome}</option>
+                  ))}
+                </select>
+                {errors.operadorOcorrencia && <p className="text-xs text-rose-600 mt-1">{errors.operadorOcorrencia}</p>}
+                <p className="text-xs text-slate-400 mt-1">
+                  Quem executou o serviço original. O reforço conta na bonificação dele, não de quem faz o reforço.
+                </p>
+              </div>
             )}
             {formaPagamento === 'incluso_no_contrato' && (
               <p className="text-xs text-amber-600 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

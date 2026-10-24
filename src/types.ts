@@ -169,6 +169,9 @@ export interface Servico {
   parcelas?: number
   contabilizarReceita: boolean
   garantiaAte?: string
+  // Só em serviço/reforço por garantia: operador que fez o serviço original (responsável pela
+  // ocorrência). Conta o reforço na bonificação dele, não de quem executou. Não aparece na OS.
+  operadorOcorrencia?: string
   horaInicioReal?: string
   maquininha?: Maquininha
   parcelasDetalhe?: ParcelaServico[]
