@@ -30,6 +30,7 @@ interface ServicoSync {
   id: string
   tipoServico: string
   clienteNome: string
+  operador?: string
   endereco?: string
   dataAgendada: string
   horaAgendada: string
@@ -100,7 +101,8 @@ function eventoBody(s: ServicoSync) {
   }
   const fim = new Date(inicioMs + 60 * 60 * 1000).toISOString().slice(0, 19)
   return {
-    summary: `${s.tipoServico} — ${s.clienteNome}`,
+    // Título: Cliente - Serviço - (Operador). Sem operador, fica só Cliente - Serviço.
+    summary: `${s.clienteNome} - ${s.tipoServico}${s.operador ? ` - (${s.operador})` : ""}`,
     location: s.endereco || undefined,
     description: `Serviço Ratzan ERP — status: ${s.status}`,
     start: { dateTime: inicio, timeZone: 'America/Sao_Paulo' },

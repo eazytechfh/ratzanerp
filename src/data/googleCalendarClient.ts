@@ -89,6 +89,7 @@ export async function sincronizarGoogleCalendar(servicos: Servico[]): Promise<Re
     id: s.id,
     tipoServico: s.tipoServico,
     clienteNome: s.clienteNome,
+    operador: s.operador,
     endereco: s.endereco,
     dataAgendada: s.dataAgendada,
     horaAgendada: s.horaAgendada,
