@@ -70,16 +70,8 @@ export default function Dashboard() {
     return { total, ativos }
   }, [clientes])
 
-  // Garantias: vale a garantia mais recente de cada cliente (um serviço novo renova a anterior).
+  // Garantias: contadas por serviço cadastrado (cada serviço tem a sua data de garantia).
   const garantias = useMemo(() => {
-    const maisRecente = new Map<string, string>()
-    servicos.forEach((s) => {
-      if (s.status === 'cancelado') return
-      const ate = s.baixa?.garantiaAte ?? s.garantiaAte
-      if (!ate) return
-      const atual = maisRecente.get(s.clienteId)
-      if (!atual || ate > atual) maisRecente.set(s.clienteId, ate)
-    })
     const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const hojeStr = fmt(hoje)
     const limite = new Date(hoje)
@@ -87,7 +79,10 @@ export default function Dashboard() {
     const limiteStr = fmt(limite)
     let aVencer = 0
     let vencidas = 0
-    maisRecente.forEach((ate) => {
+    servicos.forEach((s) => {
+      if (s.status === 'cancelado') return
+      const ate = s.baixa?.garantiaAte ?? s.garantiaAte
+      if (!ate) return
       if (ate < hojeStr) vencidas += 1
       else if (ate <= limiteStr) aVencer += 1
     })
