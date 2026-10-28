@@ -342,6 +342,7 @@ export default function Agenda() {
                       <p className="text-xs font-medium text-brand-700 truncate">
                         {FORMA_PAGAMENTO_LABEL[s.formaPagamento]}
                         {s.parcelas ? ` · ${s.parcelas}x` : ''}
+                        {s.linkPagamento && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">Gerar link de pagamento</span>}
                       </p>
                       {enderecoDoServico(s) && (
                         <a

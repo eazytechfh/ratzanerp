@@ -174,6 +174,8 @@ export interface Servico {
   operadorOcorrencia?: string
   horaInicioReal?: string
   maquininha?: Maquininha
+  // Cartão cobrado por link de pagamento (em vez de maquininha): avisa que o link precisa ser gerado.
+  linkPagamento?: boolean
   parcelasDetalhe?: ParcelaServico[]
   baixa?: BaixaServico
 }

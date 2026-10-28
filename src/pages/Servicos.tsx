@@ -247,6 +247,7 @@ export default function Servicos() {
                   <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{s.operador}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-slate-600 whitespace-nowrap">
                     {FORMA_LABEL[s.formaPagamento]}
+                    {s.linkPagamento && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700">Link</span>}
                     {ehReforco(s) && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">Reforço</span>}
                   </td>
                   <td className="px-4 py-3"><ServicoStatusBadge status={s.status} /></td>
