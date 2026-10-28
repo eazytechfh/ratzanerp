@@ -120,7 +120,8 @@ export default function Agenda() {
   // O operador só enxerga os próprios serviços; os demais perfis veem todos.
   const servicosBase = useMemo(() => {
     if (!meuNomeOperador) return servicosTodos
-    return servicosTodos.filter((s) => s.operador === meuNomeOperador)
+    // Operador adicional também enxerga o serviço na própria agenda.
+    return servicosTodos.filter((s) => s.operador === meuNomeOperador || s.operadorAdicional === meuNomeOperador)
   }, [servicosTodos, meuNomeOperador])
 
   // Filtro por operador (administrador e gerentes). Vazio = todos os operadores.
@@ -140,7 +141,7 @@ export default function Agenda() {
   const termoBusca = busca.trim()
 
   const servicos = useMemo(() => {
-    const porOperador = !podeFiltrarOperador || !filtroOperador ? servicosBase : servicosBase.filter((s) => s.operador === filtroOperador)
+    const porOperador = !podeFiltrarOperador || !filtroOperador ? servicosBase : servicosBase.filter((s) => s.operador === filtroOperador || s.operadorAdicional === filtroOperador)
     if (!termoBusca) return porOperador
     const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     const q = norm(termoBusca)
@@ -338,7 +339,7 @@ export default function Agenda() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-ink-900 truncate">{s.clienteNome}</p>
-                      <p className="text-xs text-slate-400 truncate">{s.tipoServico} · {s.operador}</p>
+                      <p className="text-xs text-slate-400 truncate">{s.tipoServico} · {s.operador}{s.operadorAdicional ? ` + ${s.operadorAdicional}` : ''}</p>
                       <p className="text-xs font-medium text-brand-700 truncate">
                         {FORMA_PAGAMENTO_LABEL[s.formaPagamento]}
                         {s.parcelas ? ` · ${s.parcelas}x` : ''}

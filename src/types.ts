@@ -153,6 +153,8 @@ export interface Servico {
   clienteNome: string
   tipoServico: string
   operador: string
+  // Segundo operador que executa o serviço junto com o responsável (aparece na OS).
+  operadorAdicional?: string
   dataAgendada: string
   horaAgendada: string
   status: StatusServico

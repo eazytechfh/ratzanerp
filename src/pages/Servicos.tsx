@@ -102,7 +102,7 @@ export default function Servicos() {
         s.clienteNome.toLowerCase().includes(q) ||
         s.tipoServico.toLowerCase().includes(q) ||
         s.operador.toLowerCase().includes(q)
-      const matchOperador = filtroOperador === 'todos' || s.operador === filtroOperador
+      const matchOperador = filtroOperador === 'todos' || s.operador === filtroOperador || s.operadorAdicional === filtroOperador
       const matchPagamento =
         filtroPagamento === 'todas' ||
         (filtroPagamento === 'reforco' ? ehReforco(s) : filtroPagamento === 'pagos' ? !ehReforco(s) : s.formaPagamento === filtroPagamento)
@@ -283,7 +283,7 @@ export default function Servicos() {
                   </td>
                   <td className="px-4 py-3 font-medium text-ink-900">{s.clienteNome}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-slate-600">{s.tipoServico}</td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{s.operador}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{s.operador}{s.operadorAdicional ? ` + ${s.operadorAdicional}` : ''}</td>
                   {filtroGarantia && (
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                       {garantiaDe(s) ? new Date(garantiaDe(s)! + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}

@@ -102,7 +102,7 @@ export default function ServicoDetalhe() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-sm">
             <div><p className="text-xs text-slate-400">Data / Hora</p><p className="text-slate-700">{new Date(servico.dataAgendada + 'T00:00:00').toLocaleDateString('pt-BR')} · {servico.horaAgendada}</p></div>
-            <div><p className="text-xs text-slate-400">Operador</p><p className="text-slate-700">{servico.operador}</p></div>
+            <div><p className="text-xs text-slate-400">Operador</p><p className="text-slate-700">{servico.operador}{servico.operadorAdicional ? ` + ${servico.operadorAdicional} (adicional)` : ''}</p></div>
             <div><p className="text-xs text-slate-400">Endereço</p><p className="text-slate-700">{servico.endereco || '-'}</p></div>
             <div><p className="text-xs text-slate-400">Valor</p><p className="text-slate-700">{servico.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>
             <div><p className="text-xs text-slate-400">Forma de pagamento</p><p className="text-slate-700">{FORMA_LABEL[servico.formaPagamento]}{servico.parcelas ? ` · ${servico.parcelas}x` : ''}</p></div>

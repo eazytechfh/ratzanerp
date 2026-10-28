@@ -46,6 +46,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
     if (!operador && operadores.length > 0) setOperador(operadores[0].nome)
   }, [operadores, operador])
   const [operadorOcorrencia, setOperadorOcorrencia] = useState('')
+  const [operadorAdicional, setOperadorAdicional] = useState('')
   const [dataAgendada, setDataAgendada] = useState('')
   const [horaAgendada, setHoraAgendada] = useState('09:00')
   const [valor, setValor] = useState('')
@@ -154,6 +155,7 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
         clienteNome: cliente.nome,
         tipoServico,
         operador,
+        operadorAdicional: operadorAdicional && operadorAdicional !== operador ? operadorAdicional : undefined,
         dataAgendada: data,
         horaAgendada: hora,
         status: 'agendado',
@@ -266,6 +268,21 @@ export default function NovoServicoModal({ onClose, clienteIdInicial }: Props) {
                 <option key={o.id} value={o.nome}>{o.nome}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Operador adicional <span className="text-slate-400 font-normal">(opcional)</span></label>
+            <select
+              value={operadorAdicional}
+              onChange={(e) => setOperadorAdicional(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
+            >
+              <option value="">Nenhum</option>
+              {operadores.filter((o) => o.nome !== operador).map((o) => (
+                <option key={o.id} value={o.nome}>{o.nome}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">Segundo operador que executa o serviço junto. Aparece na OS.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

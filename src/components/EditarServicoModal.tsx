@@ -51,6 +51,7 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
 
   const [tipoServico, setTipoServico] = useState(servico.tipoServico)
   const [operador, setOperador] = useState(servico.operador)
+  const [operadorAdicional, setOperadorAdicional] = useState(servico.operadorAdicional ?? '')
   const [dataAgendada, setDataAgendada] = useState(servico.dataAgendada)
   const [horaAgendada, setHoraAgendada] = useState(servico.horaAgendada)
   const [valor, setValor] = useState(String(servico.valor || ''))
@@ -113,6 +114,8 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
     await updateServico(servico.id, {
       tipoServico,
       operador,
+      // '' (e não undefined) para limpar no banco quando o adicional foi removido; só se já havia um.
+      operadorAdicional: operadorAdicional && operadorAdicional !== operador ? operadorAdicional : servico.operadorAdicional ? '' : undefined,
       dataAgendada,
       horaAgendada,
       // No boleto parcelado o valor do serviço é o da 1ª parcela (mesmo critério do cadastro).
@@ -192,6 +195,21 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
                 <option key={o.id} value={o.nome}>{o.nome}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Operador adicional <span className="text-slate-400 font-normal">(opcional)</span></label>
+            <select
+              value={operadorAdicional}
+              onChange={(e) => setOperadorAdicional(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm bg-white"
+            >
+              <option value="">Nenhum</option>
+              {operadores.filter((o) => o.nome !== operador).map((o) => (
+                <option key={o.id} value={o.nome}>{o.nome}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">Segundo operador que executa o serviço junto. Aparece na OS.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

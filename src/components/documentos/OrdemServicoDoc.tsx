@@ -13,6 +13,7 @@ const ROTULOS: Record<keyof Dados, string> = {
   horaFim: 'Hora fim',
   telefone: 'Telefone',
   operador: 'Operador',
+  operadorAdicional: 'Operador adicional',
   clienteNome: 'Nome do cliente',
   email: 'E-mail',
   endereco: 'Endereço',
@@ -42,6 +43,7 @@ interface Dados {
   horaFim: string
   telefone: string
   operador: string
+  operadorAdicional: string
   clienteNome: string
   email: string
   endereco: string
@@ -104,6 +106,7 @@ export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props)
     horaFim: baixa?.horaFim ?? '',
     telefone: cliente?.telefone ?? '',
     operador: servico.operador,
+    operadorAdicional: servico.operadorAdicional ?? '',
     clienteNome: servico.clienteNome,
     email: cliente?.email ?? '',
     endereco: servico.endereco || '',
@@ -200,6 +203,9 @@ export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props)
           </Campo>
           <Campo label="Telefone">{editando ? inp('telefone') : dados.telefone || '-'}</Campo>
           <Campo label="Nome do Operador:">{editando ? inp('operador') : dados.operador}</Campo>
+          {(editando || dados.operadorAdicional) && (
+            <Campo label="Operador Adicional:">{editando ? inp('operadorAdicional') : dados.operadorAdicional}</Campo>
+          )}
           <Campo label="Nome do Cliente ou Estabelecimento:">{editando ? inp('clienteNome') : dados.clienteNome}</Campo>
           <Campo label="E-mail do Cliente:">{editando ? inp('email') : dados.email || '-'}</Campo>
           <Campo label="Endereço do Serviço:">{editando ? inp('endereco') : dados.endereco || '-'}</Campo>
