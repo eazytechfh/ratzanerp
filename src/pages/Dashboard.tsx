@@ -171,8 +171,12 @@ export default function Dashboard() {
         <button onClick={() => irParaClientes('ativo')} className="text-left w-full">
           <KpiCard label="Clientes ativos" value={kpis.ativos} icon={UserCheck} tone="green" />
         </button>
-        <KpiCard label="Garantias a vencer" value={garantias.aVencer} icon={CalendarClock} tone="amber" hint="Próximos 30 dias" />
-        <KpiCard label="Garantias vencidas" value={garantias.vencidas} icon={CalendarX} tone="red" />
+        <button onClick={() => navigate('/servicos?garantia=a_vencer')} className="text-left w-full">
+          <KpiCard label="Garantias a vencer" value={garantias.aVencer} icon={CalendarClock} tone="amber" hint="Próximos 30 dias" />
+        </button>
+        <button onClick={() => navigate('/servicos?garantia=vencidas')} className="text-left w-full">
+          <KpiCard label="Garantias vencidas" value={garantias.vencidas} icon={CalendarX} tone="red" />
+        </button>
       </div>
 
       {alertas.some((a) => !a.concluido) && (

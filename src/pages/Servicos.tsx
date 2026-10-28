@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Wrench, Bug, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Plus, Search, Wrench, Bug, ChevronRight, ArrowUp, ArrowDown, ShieldAlert, X } from 'lucide-react'
 import { useServicos } from '../data/servicoStore'
 import { ServicoStatusBadge } from '../components/StatusBadge'
 import NovoServicoModal from '../components/NovoServicoModal'
@@ -30,6 +30,13 @@ const FORMA_LABEL: Record<Servico['formaPagamento'], string> = {
 // Reforço/garantia: atendimento de reforço ou pago pela garantia (não gera cobrança nova).
 const ehReforco = (s: Servico) => s.tipoAtendimento === 'reforco' || s.formaPagamento === 'garantia'
 
+type FiltroGarantia = 'a_vencer' | 'vencidas' | null
+
+const fmtISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// Data de garantia do serviço (a da baixa tem prioridade).
+const garantiaDe = (s: Servico) => s.baixa?.garantiaAte ?? s.garantiaAte
+
 function mesMatch(dataStr: string, mes: Date | null) {
   if (!mes) return true
   return dataStr.slice(0, 7) === `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, '0')}`
@@ -45,6 +52,12 @@ const FILTROS: { key: FiltroStatus; label: string }[] = [
 export default function Servicos() {
   const servicos = useServicos()
   const navigate = useNavigate()
+  // Vindo do Dashboard: /servicos?garantia=a_vencer | vencidas
+  const [searchParams] = useSearchParams()
+  const [filtroGarantia, setFiltroGarantia] = useState<FiltroGarantia>(() => {
+    const g = searchParams.get('garantia')
+    return g === 'a_vencer' || g === 'vencidas' ? g : null
+  })
   const [filtro, setFiltro] = useState<FiltroStatus>('todos')
   const [busca, setBusca] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -55,7 +68,8 @@ export default function Servicos() {
   const [filtroOperador, setFiltroOperador] = useState('todos')
   const [ordem, setOrdem] = useState<'desc' | 'asc'>('desc')
   // Abre já no mês atual; "Todos os períodos" volta a mostrar tudo.
-  const [mesFiltro, setMesFiltro] = useState<Date | null>(() => new Date())
+  // Com filtro de garantia a lista é de todos os períodos (a garantia não depende do mês do serviço).
+  const [mesFiltro, setMesFiltro] = useState<Date | null>(() => (filtroGarantia ? null : new Date()))
 
   function alternarOrdem() {
     setOrdem((prev) => (prev === 'desc' ? 'asc' : 'desc'))
@@ -72,6 +86,16 @@ export default function Servicos() {
   // e o resumo acompanham esses filtros.
   const base = useMemo(() => {
     const q = busca.trim().toLowerCase()
+    const hojeStr = fmtISO(new Date())
+    const limite = new Date()
+    limite.setDate(limite.getDate() + 30)
+    const limiteStr = fmtISO(limite)
+    const matchGarantia = (s: Servico) => {
+      if (!filtroGarantia) return true
+      const ate = garantiaDe(s)
+      if (!ate || s.status === 'cancelado') return false
+      return filtroGarantia === 'vencidas' ? ate < hojeStr : ate >= hojeStr && ate <= limiteStr
+    }
     return doPeriodo.filter((s) => {
       const matchBusca =
         !q ||
@@ -82,9 +106,9 @@ export default function Servicos() {
       const matchPagamento =
         filtroPagamento === 'todas' ||
         (filtroPagamento === 'reforco' ? ehReforco(s) : filtroPagamento === 'pagos' ? !ehReforco(s) : s.formaPagamento === filtroPagamento)
-      return matchBusca && matchOperador && matchPagamento
+      return matchBusca && matchOperador && matchPagamento && matchGarantia(s)
     })
-  }, [doPeriodo, busca, filtroOperador, filtroPagamento])
+  }, [doPeriodo, busca, filtroOperador, filtroPagamento, filtroGarantia])
 
   const filtrados = useMemo(() => {
     return base
@@ -147,6 +171,20 @@ export default function Servicos() {
           </button>
         </div>
       </div>
+
+      {filtroGarantia && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <p className="flex items-center gap-2 text-sm text-amber-800">
+            <ShieldAlert size={16} />
+            <span>
+              {filtroGarantia === 'vencidas' ? 'Garantias vencidas' : 'Garantias a vencer (próximos 30 dias)'}: <strong>{filtrados.length}</strong> serviço(s)
+            </span>
+          </p>
+          <button onClick={() => setFiltroGarantia(null)} className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900">
+            <X size={14} /> Limpar filtro
+          </button>
+        </div>
+      )}
 
       <PeriodoFiltro mes={mesFiltro} onChange={setMesFiltro} />
 
@@ -225,6 +263,7 @@ export default function Servicos() {
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium hidden md:table-cell">Serviço</th>
                 <th className="px-4 py-3 font-medium hidden lg:table-cell">Operador</th>
+                {filtroGarantia && <th className="px-4 py-3 font-medium">Garantia até</th>}
                 <th className="px-4 py-3 font-medium hidden md:table-cell">Pagamento</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">Valor</th>
@@ -245,6 +284,11 @@ export default function Servicos() {
                   <td className="px-4 py-3 font-medium text-ink-900">{s.clienteNome}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-slate-600">{s.tipoServico}</td>
                   <td className="px-4 py-3 hidden lg:table-cell text-slate-600">{s.operador}</td>
+                  {filtroGarantia && (
+                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                      {garantiaDe(s) ? new Date(garantiaDe(s)! + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
+                    </td>
+                  )}
                   <td className="px-4 py-3 hidden md:table-cell text-slate-600 whitespace-nowrap">
                     {FORMA_LABEL[s.formaPagamento]}
                     {s.linkPagamento && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700">Link</span>}
@@ -263,7 +307,7 @@ export default function Servicos() {
               ))}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                     Nenhum serviço encontrado com esses filtros.
                     {mesFiltro && servicos.length > 0 && (
                       <span className="block text-xs mt-1">
