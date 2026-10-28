@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarClock, Clock, MapPin, RefreshCw, PlayCircle, Trash2, Link2, Loader2, Pencil, AlertTriangle, Search, X } from 'lucide-react'
 import { useServicos, removeServico, updateServico, getServicoById } from '../data/servicoStore'
 import { useClientes } from '../data/clienteStore'
 import { useOperadores } from '../data/operadorStore'
@@ -135,10 +135,24 @@ export default function Agenda() {
     return [...nomes].sort((a, b) => a.localeCompare(b))
   }, [operadores, servicosTodos])
 
+  // Busca por cliente: nome, telefone ou endereço. Com texto digitado, procura em todas as datas.
+  const [busca, setBusca] = useState('')
+  const termoBusca = busca.trim()
+
   const servicos = useMemo(() => {
-    if (!podeFiltrarOperador || !filtroOperador) return servicosBase
-    return servicosBase.filter((s) => s.operador === filtroOperador)
-  }, [servicosBase, podeFiltrarOperador, filtroOperador])
+    const porOperador = !podeFiltrarOperador || !filtroOperador ? servicosBase : servicosBase.filter((s) => s.operador === filtroOperador)
+    if (!termoBusca) return porOperador
+    const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    const q = norm(termoBusca)
+    const digitos = termoBusca.replace(/D/g, '')
+    return porOperador.filter((s) => {
+      const cliente = clientes.find((c) => c.id === s.clienteId)
+      const textos = [s.clienteNome, s.endereco, ...(cliente?.enderecos.map((e) => e.endereco) ?? [])]
+      if (textos.some((t) => t && norm(t).includes(q))) return true
+      // Telefone: compara só os números, ignorando máscara. Precisa de ao menos 3 dígitos.
+      return digitos.length >= 3 && !!cliente?.telefone && cliente.telefone.replace(/D/g, '').includes(digitos)
+    })
+  }, [servicosBase, podeFiltrarOperador, filtroOperador, termoBusca, clientes])
 
   const servicosPorData = useMemo(() => {
     const map = new Map<string, Servico[]>()
@@ -352,7 +366,9 @@ export default function Agenda() {
         })}
         {datas.every((d) => (servicosPorData.get(d) ?? []).length === 0) && (
           <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
-            {filtroOperador ? `Nenhum serviço de ${filtroOperador} neste período.` : 'Nenhum serviço agendado neste período.'}
+            {termoBusca
+              ? `Nenhum serviço encontrado para "${termoBusca}".`
+              : filtroOperador ? `Nenhum serviço de ${filtroOperador} neste período.` : 'Nenhum serviço agendado neste período.'}
           </div>
         )}
       </div>
@@ -360,6 +376,11 @@ export default function Agenda() {
   }
 
   const conteudo = useMemo(() => {
+    if (termoBusca) {
+      // Resultado da busca: todas as datas com serviços do cliente, da mais recente para a mais antiga.
+      const datas = [...servicosPorData.keys()].sort((a, b) => (a < b ? 1 : -1))
+      return renderLista(datas)
+    }
     if (visao === 'dia') {
       return renderLista([fmtDate(dataRef)])
     }
@@ -413,9 +434,10 @@ export default function Agenda() {
       </div>
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visao, dataRef, servicosPorData, eventos, agora, perfil, iniciandoId])
+  }, [visao, dataRef, servicosPorData, eventos, agora, perfil, iniciandoId, termoBusca])
 
   const tituloPeriodo = useMemo(() => {
+    if (termoBusca) return `Resultados para "${termoBusca}" — ${servicos.length} serviço(s)`
     if (visao === 'dia') return dataRef.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
     if (visao === 'semana') {
       const inicio = startOfWeek(dataRef)
@@ -423,7 +445,7 @@ export default function Agenda() {
       return `${inicio.toLocaleDateString('pt-BR')} — ${fim.toLocaleDateString('pt-BR')}`
     }
     return `${MONTH_LABELS[dataRef.getMonth()]} de ${dataRef.getFullYear()}`
-  }, [visao, dataRef])
+  }, [visao, dataRef, termoBusca, servicos.length])
 
   return (
     <div className="space-y-5">
@@ -492,6 +514,21 @@ export default function Agenda() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar cliente por nome, telefone ou endereço..."
+          className="w-full h-10 pl-9 pr-9 rounded-lg border border-slate-200 bg-white text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+        />
+        {busca && (
+          <button onClick={() => setBusca('')} aria-label="Limpar busca" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {conteudo}
