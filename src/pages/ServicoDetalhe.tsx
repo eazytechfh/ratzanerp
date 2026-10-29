@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, FileText, ShieldCheck, Info, Printer, Lock, Megaphone } from 'lucide-react'
+import { ArrowLeft, FileText, ShieldCheck, Info, Printer, Lock, Megaphone, Mail, Loader2 } from 'lucide-react'
 import { useServicos } from '../data/servicoStore'
 import { useClientes } from '../data/clienteStore'
 import { ServicoStatusBadge } from '../components/StatusBadge'
@@ -9,6 +9,8 @@ import CertificadoGarantiaDoc from '../components/documentos/CertificadoGarantia
 import AvisoDoc from '../components/documentos/AvisoDoc'
 import { useAuth } from '../context/AuthContext'
 import HistoricoServico from '../components/HistoricoServico'
+import { enviarDocumentosPorEmail } from '../lib/enviarDocumentos'
+import { registrarLog } from '../data/logStore'
 
 type Aba = 'detalhes' | 'os' | 'certificado' | 'aviso'
 
@@ -29,8 +31,10 @@ export default function ServicoDetalhe() {
   const clientes = useClientes()
   const servico = servicos.find((s) => s.id === id)
   const cliente = clientes.find((c) => c.id === servico?.clienteId)
-  const { perfil } = useAuth()
+  const { perfil, userEmail } = useAuth()
   const [aba, setAba] = useState<Aba>('detalhes')
+  const [reenviando, setReenviando] = useState(false)
+  const [retornoEmail, setRetornoEmail] = useState<{ ok: boolean; texto: string } | null>(null)
 
   if (!servico) {
     return (
@@ -43,6 +47,41 @@ export default function ServicoDetalhe() {
 
   const documentosLiberados = servico.status === 'concluido' && !!servico.baixa
   const certificadoLiberado = documentosLiberados && servico.baixa?.emitirCertificado !== false
+
+  // Reenvio da OS e do Certificado por e-mail (administrador e gerentes), para serviços já concluídos.
+  const podeReenviar = documentosLiberados && perfil?.role !== 'operador'
+
+  async function handleReenviar() {
+    if (!servico || !cliente || reenviando) return
+    const email = window.prompt(
+      `Enviar a Ordem de Serviço${certificadoLiberado ? ' e o Certificado de Garantia' : ''} para qual e-mail?`,
+      cliente.email ?? '',
+    )
+    if (email === null) return
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setRetornoEmail({ ok: false, texto: 'E-mail inválido. Informe um e-mail completo, como nome@dominio.com.' })
+      return
+    }
+    setReenviando(true)
+    setRetornoEmail(null)
+    const quem = perfil?.nome ?? userEmail ?? 'sistema'
+    try {
+      const res = await enviarDocumentosPorEmail(servico, cliente, email.trim())
+      if (res?.error) {
+        registrarLog(quem, 'Falha ao reenviar e-mail ao cliente', `${servico.clienteNome}: ${res.error}`)
+        setRetornoEmail({ ok: false, texto: `Não foi possível enviar: ${res.error}` })
+      } else {
+        registrarLog(quem, 'OS/Certificado reenviados por e-mail', `${servico.clienteNome} — ${email.trim()}`)
+        setRetornoEmail({ ok: true, texto: `Enviado para ${email.trim()}.` })
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      registrarLog(quem, 'Falha ao gerar documentos do e-mail', `${servico.clienteNome}: ${msg}`)
+      setRetornoEmail({ ok: false, texto: `Não foi possível gerar os documentos: ${msg}` })
+    } finally {
+      setReenviando(false)
+    }
+  }
 
   const ABAS: { key: Aba; label: string; icon: React.ElementType; bloqueada?: boolean }[] = [
     { key: 'detalhes', label: 'Detalhes', icon: Info },
@@ -61,16 +100,34 @@ export default function ServicoDetalhe() {
           <ArrowLeft size={16} />
           Voltar para serviços
         </button>
-        {aba !== 'detalhes' && (aba === 'aviso' || documentosLiberados) && (
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
-          >
-            <Printer size={16} />
-            Imprimir / Salvar PDF
-          </button>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {podeReenviar && (
+            <button
+              onClick={handleReenviar}
+              disabled={reenviando}
+              className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition disabled:opacity-60"
+            >
+              {reenviando ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+              {reenviando ? 'Enviando...' : 'Reenviar e-mail ao cliente'}
+            </button>
+          )}
+          {aba !== 'detalhes' && (aba === 'aviso' || documentosLiberados) && (
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2 rounded-lg shadow-card transition"
+            >
+              <Printer size={16} />
+              Imprimir / Salvar PDF
+            </button>
+          )}
+        </div>
       </div>
+
+      {retornoEmail && (
+        <p className={`text-sm rounded-lg px-3 py-2 border print:hidden ${retornoEmail.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+          {retornoEmail.texto}
+        </p>
+      )}
 
       <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 print:hidden">
         {ABAS.map((a) => (
@@ -166,8 +223,8 @@ export default function ServicoDetalhe() {
         </div>
       )}
 
-      {aba === 'os' && documentosLiberados && <OrdemServicoDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} />}
-      {aba === 'certificado' && certificadoLiberado && <CertificadoGarantiaDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} />}
+      {aba === 'os' && documentosLiberados && <OrdemServicoDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} usuarioLog={perfil?.nome ?? userEmail ?? undefined} />}
+      {aba === 'certificado' && certificadoLiberado && <CertificadoGarantiaDoc servico={servico} cliente={cliente} podeEditar={perfil?.role !== 'operador'} usuarioLog={perfil?.nome ?? userEmail ?? undefined} />}
       {aba === 'aviso' && <AvisoDoc servico={servico} />}
     </div>
   )

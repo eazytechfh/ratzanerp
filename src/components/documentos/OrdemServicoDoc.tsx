@@ -3,7 +3,6 @@ import { Pencil, RotateCcw, CheckCheck } from 'lucide-react'
 import { OSHeader } from './RatzanHeader'
 import { getCategoriaById } from '../../data/categoriaStore'
 import type { Cliente, Servico } from '../../types'
-import { useAuth } from '../../context/AuthContext'
 import { descreverAlteracoes, registrarEdicaoDocumento } from '../../lib/edicaoDocumento'
 
 const ROTULOS: Record<keyof Dados, string> = {
@@ -34,6 +33,9 @@ interface Props {
   // Gerentes e administrador podem ajustar a OS antes de baixar/enviar.
   // A edição vale só para esta tela (e para o PDF/impressão) — não altera o serviço salvo.
   podeEditar?: boolean
+  // Quem edita (para o Log). Vem de fora porque este componente também é desenhado fora da
+  // árvore do app (PDF do e-mail), onde não existe contexto de login — não pode usar useAuth.
+  usuarioLog?: string
 }
 
 interface Dados {
@@ -95,7 +97,7 @@ function Badge({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props) {
+export default function OrdemServicoDoc({ servico, cliente, podeEditar, usuarioLog }: Props) {
   const baixa = servico.baixa
   const categoria = getCategoriaById(cliente?.categoriaId)?.nome
   const original: Dados = {
@@ -123,7 +125,6 @@ export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props)
   const [dados, setDados] = useState<Dados>(original)
   const [editando, setEditando] = useState(false)
   const [alterado, setAlterado] = useState(false)
-  const { userEmail, perfil } = useAuth()
   // Última versão já registrada no Log, para não repetir a mesma edição.
   const registrado = useRef<Dados>(original)
   const dadosRef = useRef(dados)
@@ -132,7 +133,7 @@ export default function OrdemServicoDoc({ servico, cliente, podeEditar }: Props)
   const registrarAlteracoes = () => {
     const alteracoes = descreverAlteracoes(registrado.current, dadosRef.current, ROTULOS)
     if (alteracoes.length === 0) return
-    registrarEdicaoDocumento(perfil?.nome ?? userEmail ?? 'sistema', 'Ordem de Serviço', `${servico.tipoServico} — ${servico.clienteNome}`, alteracoes)
+    registrarEdicaoDocumento(usuarioLog ?? 'sistema', 'Ordem de Serviço', `${servico.tipoServico} — ${servico.clienteNome}`, alteracoes)
     registrado.current = dadosRef.current
   }
   const registrarRef = useRef(registrarAlteracoes)

@@ -9,12 +9,8 @@ import { useAuth } from '../context/AuthContext'
 import { useClientes } from '../data/clienteStore'
 import { addContaPagar } from '../data/contaPagarStore'
 import { TAXAS_MAQUININHA, MAQUININHAS } from '../types'
-import { componentToPdfBase64 } from '../lib/componentToPdf'
-import { montarEmailOsCertificado } from '../lib/emailTemplates'
-import { enviarEmailCliente } from '../data/emailClient'
-import OrdemServicoDoc from './documentos/OrdemServicoDoc'
-import CertificadoGarantiaDoc from './documentos/CertificadoGarantiaDoc'
 import SignaturePad from './SignaturePad'
+import { enviarDocumentosPorEmail } from '../lib/enviarDocumentos'
 
 interface Props {
   servico: Servico
@@ -34,29 +30,6 @@ const FORMA_PAGAMENTO_LABEL: Record<Servico['formaPagamento'], string> = {
 
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10)
-}
-
-async function enviarDocumentosPorEmail(servico: Servico, cliente: ReturnType<typeof useClientes>[number]) {
-  if (!cliente?.email) return
-
-  const anexos: { nome: string; base64: string }[] = []
-
-  const osBase64 = await componentToPdfBase64(<OrdemServicoDoc servico={servico} cliente={cliente} />)
-  anexos.push({ nome: `OS-${servico.clienteNome}.pdf`, base64: osBase64 })
-
-  const comCertificado = servico.baixa?.emitirCertificado !== false
-  if (comCertificado) {
-    const certBase64 = await componentToPdfBase64(<CertificadoGarantiaDoc servico={servico} cliente={cliente} />)
-    anexos.push({ nome: `Certificado-Garantia-${servico.clienteNome}.pdf`, base64: certBase64 })
-  }
-
-  return enviarEmailCliente({
-    clienteEmail: cliente.email,
-    clienteNome: cliente.nome,
-    assunto: `Ordem de Serviço — ${servico.tipoServico} — Ratzan`,
-    mensagemHtml: montarEmailOsCertificado(cliente.nome, comCertificado),
-    anexos,
-  })
 }
 
 export default function DarBaixaModal({ servico, onClose }: Props) {
@@ -172,7 +145,11 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
             registrarLog(userEmail ?? 'sistema', 'OS/Certificado enviados por e-mail', `${servico.clienteNome} — ${cliente.email}`)
           }
         })
-        .catch((err) => console.error('Falha ao gerar/enviar documentos por e-mail:', err))
+        .catch((err) => {
+          // Antes só ia para o console do navegador — falha silenciosa que passou despercebida.
+          console.error('Falha ao gerar/enviar documentos por e-mail:', err)
+          registrarLog(userEmail ?? 'sistema', 'Falha ao gerar documentos do e-mail', `${servico.clienteNome}: ${err instanceof Error ? err.message : String(err)}`)
+        })
     }
   }
 

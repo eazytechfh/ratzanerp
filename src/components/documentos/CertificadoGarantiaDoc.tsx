@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Check, Pencil, RotateCcw, CheckCheck } from 'lucide-react'
 import { CertificadoHeader } from './RatzanHeader'
 import type { Cliente, Servico } from '../../types'
-import { useAuth } from '../../context/AuthContext'
 import { descreverAlteracoes, registrarEdicaoDocumento } from '../../lib/edicaoDocumento'
 
 const ROTULOS: Record<keyof Dados, string> = {
@@ -23,6 +22,9 @@ interface Props {
   // Gerentes e administrador podem ajustar o certificado antes de baixar/enviar.
   // A edição vale só para esta tela (e para o PDF/impressão) — não altera o serviço salvo.
   podeEditar?: boolean
+  // Quem edita (para o Log). Vem de fora porque este componente também é desenhado fora da
+  // árvore do app (PDF do e-mail), onde não existe contexto de login — não pode usar useAuth.
+  usuarioLog?: string
 }
 
 interface Dados {
@@ -71,7 +73,7 @@ function ChecklistLinha({ label, itens }: { label: string; itens: string[] }) {
   )
 }
 
-export default function CertificadoGarantiaDoc({ servico, cliente, podeEditar }: Props) {
+export default function CertificadoGarantiaDoc({ servico, cliente, podeEditar, usuarioLog }: Props) {
   const baixa = servico.baixa
   const original: Dados = {
     clienteNome: servico.clienteNome,
@@ -87,7 +89,6 @@ export default function CertificadoGarantiaDoc({ servico, cliente, podeEditar }:
   const [dados, setDados] = useState<Dados>(original)
   const [editando, setEditando] = useState(false)
   const [alterado, setAlterado] = useState(false)
-  const { userEmail, perfil } = useAuth()
   // Última versão já registrada no Log, para não repetir a mesma edição.
   const registrado = useRef<Dados>(original)
   const dadosRef = useRef(dados)
@@ -96,7 +97,7 @@ export default function CertificadoGarantiaDoc({ servico, cliente, podeEditar }:
   const registrarAlteracoes = () => {
     const alteracoes = descreverAlteracoes(registrado.current, dadosRef.current, ROTULOS)
     if (alteracoes.length === 0) return
-    registrarEdicaoDocumento(perfil?.nome ?? userEmail ?? 'sistema', 'Certificado de Garantia', `${servico.tipoServico} — ${servico.clienteNome}`, alteracoes)
+    registrarEdicaoDocumento(usuarioLog ?? 'sistema', 'Certificado de Garantia', `${servico.tipoServico} — ${servico.clienteNome}`, alteracoes)
     registrado.current = dadosRef.current
   }
   const registrarRef = useRef(registrarAlteracoes)
