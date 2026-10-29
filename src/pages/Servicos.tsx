@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Search, Wrench, Bug, ChevronRight, ArrowUp, ArrowDown, ShieldAlert, X } from 'lucide-react'
+import { Plus, Search, Wrench, Bug, ChevronRight, ArrowUp, ArrowDown, ShieldAlert, X, Mail } from 'lucide-react'
 import { useServicos } from '../data/servicoStore'
 import { ServicoStatusBadge } from '../components/StatusBadge'
 import NovoServicoModal from '../components/NovoServicoModal'
 import TiposServicoModal from '../components/TiposServicoModal'
 import TiposPragaModal from '../components/TiposPragaModal'
+import ReenvioEmLoteModal from '../components/ReenvioEmLoteModal'
+import { useAuth } from '../context/AuthContext'
 import PeriodoFiltro from '../components/financeiro/PeriodoFiltro'
 import type { Servico, StatusServico } from '../types'
 
@@ -52,6 +54,8 @@ const FILTROS: { key: FiltroStatus; label: string }[] = [
 export default function Servicos() {
   const servicos = useServicos()
   const navigate = useNavigate()
+  const { perfil } = useAuth()
+  const [reenvioOpen, setReenvioOpen] = useState(false)
   // Vindo do Dashboard: /servicos?garantia=a_vencer | vencidas
   const [searchParams] = useSearchParams()
   const [filtroGarantia, setFiltroGarantia] = useState<FiltroGarantia>(() => {
@@ -148,6 +152,15 @@ export default function Servicos() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {perfil && perfil.role !== 'operador' && (
+            <button
+              onClick={() => setReenvioOpen(true)}
+              className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
+            >
+              <Mail size={18} />
+              Reenviar e-mails
+            </button>
+          )}
           <button
             onClick={() => setTiposOpen(true)}
             className="inline-flex items-center gap-2 whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-50 text-ink-900 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-card transition"
@@ -322,6 +335,7 @@ export default function Servicos() {
         </div>
       </div>
 
+      {reenvioOpen && <ReenvioEmLoteModal onClose={() => setReenvioOpen(false)} />}
       {modalOpen && <NovoServicoModal onClose={() => setModalOpen(false)} />}
       {tiposOpen && <TiposServicoModal onClose={() => setTiposOpen(false)} />}
       {tiposPragaOpen && <TiposPragaModal onClose={() => setTiposPragaOpen(false)} />}

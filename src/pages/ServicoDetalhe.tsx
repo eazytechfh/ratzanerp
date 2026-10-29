@@ -9,7 +9,7 @@ import CertificadoGarantiaDoc from '../components/documentos/CertificadoGarantia
 import AvisoDoc from '../components/documentos/AvisoDoc'
 import { useAuth } from '../context/AuthContext'
 import HistoricoServico from '../components/HistoricoServico'
-import { enviarDocumentosPorEmail } from '../lib/enviarDocumentos'
+import { enviarDocumentosPorEmail, ehVisita } from '../lib/enviarDocumentos'
 import { registrarLog } from '../data/logStore'
 
 type Aba = 'detalhes' | 'os' | 'certificado' | 'aviso'
@@ -49,7 +49,7 @@ export default function ServicoDetalhe() {
   const certificadoLiberado = documentosLiberados && servico.baixa?.emitirCertificado !== false
 
   // Reenvio da OS e do Certificado por e-mail (administrador e gerentes), para serviços já concluídos.
-  const podeReenviar = documentosLiberados && perfil?.role !== 'operador'
+  const podeReenviar = documentosLiberados && perfil?.role !== 'operador' && !ehVisita(servico)
 
   async function handleReenviar() {
     if (!servico || !cliente || reenviando) return

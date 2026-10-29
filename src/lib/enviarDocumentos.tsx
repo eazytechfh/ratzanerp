@@ -5,6 +5,9 @@ import OrdemServicoDoc from '../components/documentos/OrdemServicoDoc'
 import CertificadoGarantiaDoc from '../components/documentos/CertificadoGarantiaDoc'
 import type { Cliente, Servico } from '../types'
 
+// Visitas não recebem OS nem Certificado por e-mail.
+export const ehVisita = (s: Servico) => s.tipoAtendimento === 'visita' || /^visita/i.test(s.tipoServico)
+
 // Gera a OS (e o Certificado, quando emitido) em PDF e envia por e-mail ao cliente.
 // Usado na baixa do serviço e no botão "Reenviar e-mail" do detalhe do serviço.
 // `emailDestino` permite enviar para um e-mail diferente do cadastrado.

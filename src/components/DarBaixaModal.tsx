@@ -10,7 +10,7 @@ import { useClientes } from '../data/clienteStore'
 import { addContaPagar } from '../data/contaPagarStore'
 import { TAXAS_MAQUININHA, MAQUININHAS } from '../types'
 import SignaturePad from './SignaturePad'
-import { enviarDocumentosPorEmail } from '../lib/enviarDocumentos'
+import { enviarDocumentosPorEmail, ehVisita } from '../lib/enviarDocumentos'
 
 interface Props {
   servico: Servico
@@ -135,7 +135,8 @@ export default function DarBaixaModal({ servico, onClose }: Props) {
     const cliente = clientes.find((c) => c.id === servico.clienteId)
     onClose()
 
-    if (cliente?.email) {
+    // Visitas não recebem a OS por e-mail.
+    if (cliente?.email && !ehVisita(servico)) {
       enviarDocumentosPorEmail(atualizado, cliente)
         .then((res) => {
           if (res?.error) {
