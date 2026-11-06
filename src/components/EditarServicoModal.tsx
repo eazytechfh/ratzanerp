@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import type { FormaPagamento, Maquininha, Servico } from '../types'
 import { MAQUININHAS } from '../types'
 import { useClientes } from '../data/clienteStore'
-import { updateServico } from '../data/servicoStore'
+import { updateServico, addServico } from '../data/servicoStore'
 import { useOperadores } from '../data/operadorStore'
 import { useTiposServico } from '../data/tipoServicoStore'
 import { useTiposPraga } from '../data/tipoPragaStore'
@@ -63,7 +63,15 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
   const [pragas, setPragas] = useState<string[]>(servico.pragas ?? [])
   const [garantiaAte, setGarantiaAte] = useState(servico.garantiaAte ?? '')
   const [observacoes, setObservacoes] = useState(servico.observacoes ?? '')
+  // Datas extras de aplicação: cada uma vira um novo serviço do cliente (igual ao cadastro).
+  const [datasExtras, setDatasExtras] = useState<{ data: string; hora: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const podeAddDatas = servico.tipoAtendimento !== 'visita'
+  const addDataExtra = () => setDatasExtras((prev) => [...prev, { data: '', hora: horaAgendada || '09:00' }])
+  const updateDataExtra = (idx: number, field: 'data' | 'hora', value: string) =>
+    setDatasExtras((prev) => prev.map((d, i) => (i === idx ? { ...d, [field]: value } : d)))
+  const removeDataExtra = (idx: number) => setDatasExtras((prev) => prev.filter((_, i) => i !== idx))
 
   function togglePraga(p: string) {
     setPragas((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]))
@@ -134,6 +142,51 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
       observacoes,
     })
     registrarLog(userEmail ?? 'sistema', 'Serviço editado', `${tipoServico} — ${servico.clienteNome}`)
+
+    // Datas extras: novos serviços do mesmo cliente, sem valor nem lançamento financeiro (como no cadastro).
+    const novasDatas = datasExtras.filter((d) => d.data)
+    if (podeAddDatas && novasDatas.length > 0) {
+      const ehReforcoAtual = formaPagamento === 'garantia'
+      const falhas: { data: string; hora: string }[] = []
+      let criadas = 0
+      for (let i = 0; i < novasDatas.length; i++) {
+        const { data, hora } = novasDatas[i]
+        const created = await addServico({
+          id: `serv-${Date.now()}-${i}`,
+          clienteId: servico.clienteId,
+          clienteNome: servico.clienteNome,
+          tipoServico,
+          operador,
+          operadorAdicional: operadorAdicional && operadorAdicional !== operador ? operadorAdicional : undefined,
+          dataAgendada: data,
+          horaAgendada: hora || horaAgendada,
+          status: 'agendado',
+          endereco: servico.endereco,
+          enderecoLat: servico.enderecoLat,
+          enderecoLng: servico.enderecoLng,
+          observacoes,
+          valor: 0,
+          tipoAtendimento: ehReforcoAtual ? 'reforco' : 'novo',
+          pragas,
+          formaPagamento: 'incluso_no_contrato',
+          contabilizarReceita: false,
+          garantiaAte: garantiaAte || undefined,
+          operadorOcorrencia: ehReforcoAtual ? servico.operadorOcorrencia : undefined,
+        })
+        if (created) {
+          criadas++
+          registrarLog(userEmail ?? 'sistema', 'Serviço agendado', `${tipoServico} — ${servico.clienteNome} (data extra)`)
+        } else {
+          falhas.push({ data, hora })
+        }
+      }
+      if (falhas.length > 0) {
+        // O serviço editado já foi salvo; mantém na tela só as datas que não foram criadas.
+        setDatasExtras(falhas)
+        setErrors({ datasExtras: `${falhas.length} data(s) não puderam ser salvas (${criadas} criada(s)). Tente novamente.` })
+        return
+      }
+    }
     onClose()
   }
 
@@ -362,6 +415,42 @@ export default function EditarServicoModal({ servico, onClose }: Props) {
               </div>
             )}
           </div>
+
+          {podeAddDatas && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Mais datas de aplicação</label>
+              <div className="space-y-2">
+                {datasExtras.map((d, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={d.data}
+                      onChange={(e) => updateDataExtra(idx, 'data', e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                    <input
+                      type="time"
+                      value={d.hora}
+                      onChange={(e) => updateDataExtra(idx, 'hora', e.target.value)}
+                      className="w-28 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                    />
+                    <button type="button" onClick={() => removeDataExtra(idx)} className="text-slate-400 hover:text-rose-600 p-1">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={addDataExtra} className="text-xs font-semibold text-brand-600 hover:text-brand-700">
+                  + Adicionar data de aplicação
+                </button>
+                {datasExtras.length > 0 && (
+                  <p className="text-xs text-slate-500">
+                    Cada data cria um novo serviço deste cliente, sem valor (incluso no contrato), com o mesmo operador, pragas e garantia.
+                  </p>
+                )}
+                {errors.datasExtras && <p className="text-xs text-rose-600">{errors.datasExtras}</p>}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Garantia até</label>
