@@ -228,7 +228,7 @@ export default function EditarClienteModal({ cliente, onClose }: Props) {
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Segmento <span className="text-slate-400 font-normal">(opcional)</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {SEGMENTOS_CLIENTE.map((s) => (
                 <button
                   key={s}

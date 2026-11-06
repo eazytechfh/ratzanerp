@@ -24,7 +24,7 @@ export interface CategoriaCliente {
 export const ORIGENS_SERVICO = ['Indicação', 'Site', 'Redes Sociais', 'Tráfego Pago', 'Telefone', 'Já é Cliente', 'Outro'] as const
 export type OrigemServico = (typeof ORIGENS_SERVICO)[number]
 
-export const SEGMENTOS_CLIENTE = ['Mensal', 'Trimestral', 'Semestral', 'Anual'] as const
+export const SEGMENTOS_CLIENTE = ['Mensal', '45 dias', 'Bimestral', 'Trimestral', 'Semestral', 'Anual'] as const
 export type SegmentoCliente = (typeof SEGMENTOS_CLIENTE)[number]
 
 export interface Cliente {
